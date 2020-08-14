@@ -1,0 +1,12 @@
+target/
+**/.DS_Store
+pom.xml
+node_modules
+resources/public/js/
+resources/main.js
+*-init.clj
+figwheel_server.log
+.nrepl-port
+.lein-repl-history
+.rebel_readline_history
+package-lock.json

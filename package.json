@@ -1,0 +1,16 @@
+{
+  "name": "ComicExMachina",
+  "productName": "ComiExMachina",
+  "version": "0.1.0",
+  "description": "starting template for creating Electron Applications (with ClojureScript and Rum)",
+  "main": "resources/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron-packager": "^15.0.0"
+  },
+  "dependencies": {
+    "electron": "^9.2.0"
+  }
+}
