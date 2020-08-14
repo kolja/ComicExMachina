@@ -14,7 +14,7 @@
 (defn mouse-move [e]
     (log (str (offset e))))
 
-(rum/defc document [state]
+(rum/defc document [prefs page]
   [:.document
    [:.page.active
     {:on-mouse-down mouse-down
