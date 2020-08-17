@@ -40,7 +40,7 @@ body, input {
     flex: 1 100%;
 }
 
-.pages {
+.overview {
     flex: 0 0 auto;
     height: 100%;
     width: 140px;
@@ -49,7 +49,7 @@ body, input {
     flex-flow: column nowrap;
     justify-content: space-between;
 }
-.pages ol {
+.overview ol {
     display: flex;
     padding: 20px;
     flex-flow: row wrap;
@@ -57,7 +57,7 @@ body, input {
     overflow: hidden;
 }
 
-.pages li {
+.overview li {
     display: block;
     width: 2rem;
     height: 3rem;
@@ -67,20 +67,18 @@ body, input {
     color: #777;
     background-color: #444;
 }
-.pages li:first-child {
+.overview li:first-child {
     border: dashed #444 2px;
     background-color: #333;
     color: #333;
 }
-.pages li.current {
-    color: #AAA;
-    border: solid 1px #AAA;
+.overview li.current {
+    color: #aaa;
+    border: solid 1px #aaa;
 }
 
-.document { }
-.document .page {
-    width: 210px;
-    height: 297px;
-    margin: 60px;
+.page {
     background-color: white;
 }
+
+.page svg {background-color: #eee;}

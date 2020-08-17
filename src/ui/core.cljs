@@ -1,7 +1,7 @@
 (ns ui.core
   (:require [rum.core :as rum]
-            [ui.pages :refer [pages]]
-            [ui.document :refer [document]]
+            [ui.overview :refer [overview]]
+            [ui.page :refer [page]]
             [oops.core :refer [ocall]]))
 
 (enable-console-print!)
@@ -24,7 +24,7 @@
         page-num (rum/cursor-in state [:current-page])
         current-page (rum/cursor-in state [:pages @page-num])]
   [:.root
-    (pages prefs all-pages page-num)
-    (document prefs current-page)]))
+    (overview prefs all-pages page-num)
+    (page prefs current-page)]))
 
 (rum/mount (root) (ocall js/document :getElementById "app"))

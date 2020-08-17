@@ -1,4 +1,4 @@
-(ns ui.document
+(ns ui.page
   (:require [rum.core :as rum]
             [tools.devtools :refer [log]]
             [oops.core :refer [oget ocall]]))
@@ -28,11 +28,14 @@
            :stroke "currentcolor"
            }]])
 
-(rum/defc document < rum/reactive [prefs page]
+(rum/defc page < rum/reactive [prefs page]
   (let [prefs (rum/react prefs)
         panels (rum/react page)]
-    [:.document
-     [:.page
+     [:.page {:style {:margin "40px"
+                      :padding "20px"
+                      :width (prefs :width) 
+                      :height (+ 40 (prefs :height))}}
+
       [:svg {
              :width (prefs :width)
              :height (prefs :height)
@@ -46,5 +49,5 @@
        ;    (for [p panels] 
        ;      (panel p)))
        ]
-      ]])
+      ])
 )

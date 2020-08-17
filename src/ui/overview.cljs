@@ -1,4 +1,4 @@
-(ns ui.pages
+(ns ui.overview
   (:require [rum.core :as rum]
             [tools.devtools :refer [log]]))
 
@@ -10,8 +10,8 @@
 (defn set-current-page [e]
   (log e))
 
-(rum/defc pages < rum/reactive [prefs pages current-page]
-    [:div.pages
+(rum/defc overview < rum/reactive [prefs pages current-page]
+    [:div.overview
       [:ol
         (for [n (range (count (rum/react pages)))]
           [:li {:key n
