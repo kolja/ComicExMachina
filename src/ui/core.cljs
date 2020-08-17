@@ -19,12 +19,15 @@
 }))
 
 (rum/defc root < rum/reactive []
-  (let [prefs (rum/cursor-in state [:preferences])
+  (let [preferences (rum/cursor-in state [:preferences])
+        prefs (rum/react preferences)
         all-pages (rum/cursor-in state [:pages])
         page-num (rum/cursor-in state [:current-page])
-        current-page (rum/cursor-in state [:pages @page-num])]
+        current-page (rum/cursor-in state [:pages (rum/react page-num)])]
+    (swap! preferences assoc :cell-dimensions [(/ (prefs :width) (prefs :grid-width)) 
+                                               (/ (prefs :height) (prefs :grid-height))])
   [:.root
-    (overview prefs all-pages page-num)
-    (page prefs current-page)]))
+    (overview preferences all-pages page-num)
+    (page preferences current-page)]))
 
 (rum/mount (root) (ocall js/document :getElementById "app"))

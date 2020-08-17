@@ -8,46 +8,59 @@
     [(- (oget e :pageX) (oget bound :left))
      (- (oget e :pageY) (oget bound :top))]))
 
-(defn mouse-down [prefs panels e]
-  (let [[x y] (offset e)]
-    (log (str x "-" y "-" prefs))))
+(defn new-panel-with-cell [page panels cells cell]
+  (let [panel (count panels)]
+    (swap! page update-in [:panels] conj {:cells [cell]})
+    (swap! page update-in [:cells] assoc cell panel)))
+
+(defn mouse-down [prefs page panels cells e]
+  (let [[x y] (offset e)
+        [cellx celly] (prefs :cell-dimensions)
+        cell [(quot x cellx) (quot y celly)]]
+    ;; {:panels [{:cells [[0 0][1 1]]}]
+    ;;  :cells {[0 0] 0 [1 1] 0}}
+    (when-not (cells cell) (new-panel-with-cell page panels cells cell))))
 
 (defn mouse-move [e]
     (log (str (offset e))))
 
-(rum/defc panel [p]
-  [:g {:color "black"
-       :on-mouse-down #(log p)}
+(rum/defc panel [prefs pan rc]
+  (let [[cell-width cell-height] (prefs :cell-dimensions)
+        color1 (str )]
+  [:g {:color (str "rgb(" (rc 0) "%," (rc 1) "%," (rc 2) "%)")}
+   (for [cell (pan :cells)]
    [:rect {
-           :x 0
-           :y 0
-           :width 24
-           :height 24
-           :fill "none"
+           :x (* cell-width (cell 0))
+           :y (* cell-height (cell 1))
+           :width cell-width
+           :height cell-height
+           :fill "currentcolor"
            :stroke-width 2
-           :stroke "currentcolor"
-           }]])
+           :stroke "black"
+           }])]))
 
-(rum/defc page < rum/reactive [prefs page]
-  (let [prefs (rum/react prefs)
-        panels (rum/react page)]
+(defn random-color [] (vec (repeatedly 3 #(Math.floor (+ 10 (* 80 (Math.random)))))))
+
+(rum/defc page < rum/reactive [preferences page]
+  (let [prefs (rum/react preferences)
+        {:keys [width height current-page]} prefs
+        pg (rum/react page)
+        panels (pg :panels)
+        cells (pg :cells)]
      [:.page {:style {:margin "40px"
                       :padding "20px"
-                      :width (prefs :width) 
-                      :height (+ 40 (prefs :height))}}
+                      :width width 
+                      :height (+ 40 height)}}
 
       [:svg {
-             :width (prefs :width)
-             :height (prefs :height)
-             :view-box [0 0 (prefs :width) (prefs :height)]
+             :width width
+             :height height 
+             :view-box [0 0 width height]
              :xmlns "http://www.w3.org/2000/svg"
-             :on-mouse-down (partial mouse-down prefs panels)
+             :on-mouse-down (partial mouse-down prefs page (or panels []) (or cells {}))
              ; :on-mouse-move mouse-move
              }
-       (panel)
-       ;(let [panels ((rum/react page) :panels)]
-       ;    (for [p panels] 
-       ;      (panel p)))
+       (for [pan panels] (panel prefs pan (random-color)))
        ]
       ])
 )
