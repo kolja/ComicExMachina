@@ -22,7 +22,7 @@
   (let [prefs (rum/cursor-in state [:preferences])
         all-pages (rum/cursor-in state [:pages])
         page-num (rum/cursor-in state [:current-page])
-        current-page (rum/cursor-in state [:current-page @page-num])]
+        current-page (rum/cursor-in state [:pages @page-num])]
   [:.root
     (pages prefs all-pages page-num)
     (document prefs current-page)]))
