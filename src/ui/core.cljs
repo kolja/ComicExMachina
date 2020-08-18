@@ -15,7 +15,8 @@
         :width 210
         :height 297
         }
-    :pages [{:panels []}]
+    :pages [{:panels [{:cells []}] :cells {}}
+            {:panels [{:cells []}] :cells {}}]
 }))
 
 (rum/defc root < rum/reactive []
