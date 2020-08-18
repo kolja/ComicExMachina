@@ -4,24 +4,18 @@
 
 (enable-console-print!)
 
-(defn init-cells [max-x max-y]
-  (for [x (range max-x) y (range max-y)] [x y]))
-
-(defn set-current-page [e]
-  (log e))
-
 (rum/defc overview < rum/reactive [prefs pages current-page]
     [:div.overview
       [:ol
         (for [n (range (count (rum/react pages)))]
           [:li {:key n
                 :class [(when (= n (rum/react current-page)) "current")]
-                :on-click #(reset! current-page n)} 
-           (str n)]
+                :on-click #(when-not (zero? n) (reset! current-page n))} 
+           (if (zero? n) "" (str n))]
         )]
 
       [:button
-       {:on-click #(swap! pages conj {:panels []})}
+       {:on-click #(swap! pages conj {:panels [] :cells {}})}
        (str "add page")]
     ])
 
