@@ -1,16 +1,24 @@
 (ns ui.panel
   (:require [rum.core :as rum]
+            [clojure.string :refer [join]]
             [tools.devtools :refer [log]]
             [oops.core :refer [oget ocall]]))
 
-(defn random-color [] (vec (repeatedly 3 #(Math.floor (+ 10 (* 80 (Math.random)))))))
+(defn random-color [] (str "rgb(" 
+                           (->> (repeatedly 3 #(Math.floor (+ 10 (* 80 (Math.random)))))
+                                (map #(str % "%"))
+                                (join ",")) 
+                           ")"))
 
-(rum/defc panel [prefs pan]
+(def colors (into [] (repeatedly 100 random-color)))
+
+(rum/defcs panel 
+  < (rum/local (random-color) ::color)
+  [state prefs [i pan]]
   (let [[cell-width cell-height] (prefs :cell-dimensions)
-        color1 (str )
         cells (pan :cells)
-        rc (random-color)]
-  [:g {:color (str "rgb(" (rc 0) "%," (rc 1) "%," (rc 2) "%)")
+        rc (colors i)]
+  [:g {:color rc
        :key (random-uuid)}
    (for [cell cells]
      [:rect {

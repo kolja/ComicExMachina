@@ -2,6 +2,7 @@
   (:require [rum.core :as rum]
             [ui.panel :refer [panel]]
             [tools.devtools :refer [log]]
+            [tools.helpers :refer [for-indexed]]
             [oops.core :refer [oget ocall]]))
 
 (defonce active-panel (atom nil))
@@ -38,7 +39,7 @@
         (if (cells cell) ;; cell exists
           (when-not (= (cells cell) @active-panel)
             (migrate-cell page panels cells cell))
-          (new-panel-with-cell page panels cells cell)))))
+          (new-panel-with-cell page panels cells cell))))) ;; new *panel* on mousemove? fix!
 
 (defn mouse-up [e]
   (reset! active-panel nil))
@@ -66,6 +67,6 @@
              :on-mouse-move (partial mouse-move prefs page panels cells)
              :on-mouse-up mouse-up
              }
-       (for [pan panels] (panel prefs pan))]
+       (for-indexed [p panels] (panel prefs p))]
       ])
 )
