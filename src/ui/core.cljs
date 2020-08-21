@@ -11,8 +11,8 @@
                       :id 0
                       :current-page 1
                       :preferences {
-                                    :grid-width 24
-                                    :grid-height 24
+                                    :grid-width 12
+                                    :grid-height 12
                                     :width 210
                                     :height 297
                                     }
@@ -35,7 +35,7 @@
         all-pages     (rum/cursor-in state [:pages])
         page-num      (rum/cursor-in state [:current-page])
         current-page  (rum/cursor-in state [:pages (rum/react page-num)])]
-    [:.root
+    [:.root {:key "root"}
       (overview preferences all-pages page-num)
       (page     preferences current-page)]))
 

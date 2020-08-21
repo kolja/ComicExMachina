@@ -53,12 +53,14 @@
         pg (rum/react page)
         panels (pg :panels)
         cells (pg :cells)]
-     [:.page {:style {:margin "40px"
+     [:.page {:key (random-uuid)  
+              :style {:margin "40px"
                       :padding "20px"
                       :width width 
                       :height (+ 40 height)}}
 
       [:svg {
+             :key "page-svg"
              :width width
              :height height 
              :view-box [0 0 width height]
@@ -67,6 +69,6 @@
              :on-mouse-move (partial mouse-move prefs page panels cells)
              :on-mouse-up mouse-up
              }
-       (for-indexed [p panels] (panel prefs p))]
+       (for-indexed [p panels] (rum/with-key (panel prefs p) (str "panel" (first p))))]
       ])
 )
