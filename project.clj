@@ -5,7 +5,7 @@
   :description "electron app (clojure + rum) starting template"
   :dependencies [[org.clojure/clojure "1.10.0"]
                  [org.clojure/clojurescript "1.10.520"]
-                 [rum "0.12.3"]
+                 [reagent "1.0.0-alpha2"]
                  [binaryage/oops "0.7.0"]
                  [ring/ring-core "1.7.1"]]
   :plugins [[lein-cljsbuild "1.1.8"]

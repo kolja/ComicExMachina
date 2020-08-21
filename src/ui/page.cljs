@@ -1,11 +1,12 @@
 (ns ui.page
-  (:require [rum.core :as rum]
+  (:require [reagent.core :as r]
+            [reagent.dom :as rd]
             [ui.panel :refer [panel]]
             [tools.devtools :refer [log]]
             [tools.helpers :refer [for-indexed]]
             [oops.core :refer [oget ocall]]))
 
-(defonce active-panel (atom nil))
+(defonce active-panel (r/atom nil))
 
 (defn offset [e]
   (let [bound (ocall e "currentTarget.getBoundingClientRect")]
@@ -44,31 +45,27 @@
 (defn mouse-up [e]
   (reset! active-panel nil))
 
-(rum/defcs page 
-  < rum/reactive 
-    (rum/local nil ::current-panel)
-  [state preferences page]
-  (let [prefs (rum/react preferences)
-        {:keys [width height current-page]} prefs
-        pg (rum/react page)
-        panels (pg :panels)
-        cells (pg :cells)]
-     [:.page {:key (random-uuid)  
-              :style {:margin "40px"
-                      :padding "20px"
-                      :width width 
-                      :height (+ 40 height)}}
-
-      [:svg {
-             :key "page-svg"
-             :width width
-             :height height 
-             :view-box [0 0 width height]
-             :xmlns "http://www.w3.org/2000/svg"
-             :on-mouse-down (partial mouse-down prefs page panels cells)
-             :on-mouse-move (partial mouse-move prefs page panels cells)
-             :on-mouse-up mouse-up
-             }
-       (for-indexed [p panels] (rum/with-key (panel prefs p) (str "panel" (first p))))]
-      ])
-)
+(defn page [preferences page]
+  (fn [preferences page]
+    (let [prefs @preferences
+          {:keys [width height current-page]} prefs
+          pg @page
+          panels (pg :panels)
+          cells (pg :cells)]
+      [:div.page {:key (random-uuid)  
+               :style {:margin "40px"
+                       :padding "20px"
+                       :width width 
+                       :height (+ 40 height)}}
+       [:svg {
+              :key (random-uuid)
+              :width width
+              :height height 
+              :view-box [0 0 width height]
+              :xmlns "http://www.w3.org/2000/svg"
+              :on-mouse-down (partial mouse-down prefs page panels cells)
+              :on-mouse-move (partial mouse-move prefs page panels cells)
+              :on-mouse-up mouse-up
+              }
+        (for-indexed [p panels] ^{:key (str "panel-" (first p))} [panel prefs p])]
+       ])))

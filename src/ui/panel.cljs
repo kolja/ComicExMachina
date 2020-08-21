@@ -1,5 +1,6 @@
 (ns ui.panel
-  (:require [rum.core :as rum]
+  (:require [reagent.core :as r]
+            [reagent.dom :as rd]
             [clojure.string :refer [join]]
             [tools.devtools :refer [log]]
             [tools.helpers :refer [for-indexed]]
@@ -13,34 +14,16 @@
 
 (def colors (into [] (repeatedly 100 random-color)))
 
-(def before-render
-    {:before-render (fn [state]
-          (let [[prefs [i panel]] (:rum/args state)]
-            (log (str "-" i "->" panel)))
-          state
-    )})
-
-(rum/defcs panel 
-  < (rum/local (random-color) ::color)
-  < before-render
-  [state prefs [i panel]]
-  (let [[cell-width cell-height] (prefs :cell-dimensions)
-        cells (panel :cells)
-        rc (colors i)]
-    [:g {:color rc}
-     [:polygon {:points (join " " (for [[x y] cells] (str (* cell-width x) "," (* cell-height y))))
-                :stroke "black"
-                :fill "currentcolor"}]
-     ;(for-indexed [[cell-idx [x y]] cells]
-     ;             [:rect {:key (str "cell-" i "-" cell-idx)
-     ;                     :x (* cell-width x)
-     ;                     :y (* cell-height y)
-     ;                     :width cell-width
-     ;                     :height cell-height
-     ;                     :fill "currentcolor"
-     ;                     :stroke-width 2
-     ;                     :stroke "black"
-     ;                     }]
-     ;             )
-     ]))
+(defn panel 
+  [prefs [i panel]]
+  (fn [prefs [i panel]] 
+    (let [[cell-width cell-height] (prefs :cell-dimensions)
+          cells (panel :cells)
+          rc (colors i)]
+      [:g {:color rc}
+       [:polygon {:key "poly"
+                  :points (join " " (for [[x y] cells] (str (* cell-width x) "," (* cell-height y))))
+                  :stroke "black"
+                  :fill "currentcolor"}]]
+      )))
 

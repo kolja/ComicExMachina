@@ -18,8 +18,10 @@
                                   :icon (str js/__dirname "/public/icon/icon.png")
                                   :webPreferences {:nodeIntegration true }}))) ;; <-- do I really need this?
 
-  (-> (ocall session "defaultSession.loadExtension" "/Users/kolja/Library/Application Support/Google/Chrome/Default/Extensions/fmkadmapgofadopljbjfkapdkoienihi/4.8.2_0")
-      (.then (ocall (.-webContents @main-window) :openDevTools)))
+  (ocall (.-webContents @main-window) :openDevTools)
+
+  ;(-> (ocall session "defaultSession.loadExtension" "/Users/kolja/Library/Application Support/Google/Chrome/Default/Extensions/fmkadmapgofadopljbjfkapdkoienihi/4.8.2_0")
+  ;    (.then (ocall (.-webContents @main-window) :openDevTools)))
 
   (.openDevTools ^js/electron.BrowserWindow @main-window)
 
@@ -27,6 +29,6 @@
   (.on ^js/electron.BrowserWindow @main-window "closed" #(reset! main-window nil)))
 
 
-(oset! js/process.env "!ELECTRON_DISABLE_SECURITY_WARNINGS" true) ;; not working
+; (oset! js/process.env "!ELECTRON_DISABLE_SECURITY_WARNINGS" true) ;; not working
 (.on app "window-all-closed" #(when-not mac? (.quit app)))
 (.on app "ready" init-browser)
