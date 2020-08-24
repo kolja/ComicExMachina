@@ -31,31 +31,36 @@
             [[0 0][1 0][1 1][0 1]]) 
        (mod n 4)))
 
+(defn mod4 
+  ([f n] (mod (f n) 4)) 
+  ([n] (mod4 identity n)))
+
 (defn make-verts [verts cell from to] 
-  (let [angle (mod (+ 2 (- from to)) 4)
-        [cx cy] (rotate cell (+ from 3))
-        [c1x c1y] (rotate cell from)
-        [c3x c3y] (rotate cell (+ from 2))]
+  (let [angle (mod4 (- from to))
+       normals [[-1 -1] [1 -1] [1 1] [-1 1]]
+       [cx cy] (rotate cell (+ from 3))
+       [c1x c1y] (rotate cell from)
+       [c3x c3y] (rotate cell (+ from 2))]
     (condp = angle
-      0 (conj verts {:x cx :y cy :normal []} {:x c1x :y c1y :normal []})
-      1 (conj verts {:x cx :y cy :normal []})
-      2 verts
-      3 (conj verts {:x c3x :y c3y :normal []}))))
+      0 verts ;; from == to -> going in a straight line. No vertex added
+      1 (conj verts {:x c3x :y c3y :normal (nth normals (mod4 (+ to 3)))})
+      2 (conj verts {:x cx :y cy :normal (nth normals (mod4 inc to))} {:x c1x :y c1y :normal (nth normals (mod4 (+ to 2)))})
+      3 (conj verts {:x cx :y cy :normal (nth normals (mod4 (+ to 2)))})
+      )))
 
 (defn walk-the-line [prefs cells cursor]
   (let [cells (into #{} cells) ;; TODO: make sure cells is a set to begin with, then delete
         {:keys [cell to from verts n]} cursor
         neighbours (cell-neighbours prefs cell)
-        next-cell (nth neighbours to)
-        mod4 (fn [f] (fn [n] (-> n f (mod 4))))]
-    (cond 
+        next-cell (nth neighbours to)]
+    (cond  ;; TODO: cond changes the cursor. Recursive call is made afterwards with changed cursor.
       (empty? cells) verts
       (every? #(or (nil? %) (not (contains? cells %))) neighbours)
         (let [[x y] cell]
-          [{:x x :y y :normal []} ; -1 -1
-           {:x (inc x) :y y :normal []} ; 1 -1
-           {:x (inc x) :y (inc y) :normal []} ; 1 1
-           {:x x :y (inc y) :normal []}]) ; -1 1
+          [{:x x :y y :normal [-1 -1]}
+           {:x (inc x) :y y :normal [1 -1]}
+           {:x (inc x) :y (inc y) :normal [1 1]}
+           {:x x :y (inc y) :normal [-1 1]}])
       (and (>= (count verts) 4) 
            (or (= (first verts) (last verts)) (= (first verts) (first (take-last 2 verts)))))
         (butlast verts)
@@ -64,7 +69,7 @@
                              (assoc :cell next-cell) 
                              (assoc :from to)
                              (update :n inc)
-                             (update :to (mod4 dec)))]
+                             (update :to (comp mod4 dec)))]
           (if (nil? from)
             (walk-the-line prefs cells new-cursor)
             (walk-the-line prefs cells 
@@ -72,7 +77,7 @@
                                (assoc :verts (make-verts verts cell from to)))))) 
       :else
         (walk-the-line prefs cells (-> cursor 
-                                       (update :to (mod4 inc))
+                                       (update :to (comp mod4 inc))
                                        (update :n inc)))
       )))
 
@@ -81,6 +86,7 @@
   (fn [prefs [i panel]] 
     (let [[cell-width cell-height] (prefs :cell-dimensions)
           cells (panel :cells)
+          offset (/ (prefs :gutter-width) 2)
           rc (colors i)
           [x y :as cell] (upper-left-corner cells)
           cursor {:cell cell :to 2 :from nil
@@ -88,7 +94,9 @@
           verts (walk-the-line prefs cells cursor)]
       [:g {:color rc}
        [:polygon {:key "poly"
-                  :points (join " " (for [{:keys [x y]} verts] (str (* cell-width x) "," (* cell-height y))))
+                  :points (join " " (for [{:keys [x y] [nx ny] :normal} verts] 
+                                      (str (- (* cell-width x) (* offset nx)) "," 
+                                           (- (* cell-height y) (* offset ny)))))
                   :stroke "black"
                   :fill "currentcolor"}]]
       )))

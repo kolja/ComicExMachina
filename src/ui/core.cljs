@@ -13,6 +13,7 @@
                         :id 0
                         :current-page 1
                         :preferences {
+                                      :gutter-width 6
                                       :grid-width 12
                                       :grid-height 12
                                       :width 210
