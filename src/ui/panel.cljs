@@ -33,7 +33,7 @@
 
 (defn mod4 
   ([f n] (mod (f n) 4)) 
-  ([n] (mod4 identity n)))
+  ([n]   (mod n 4)))
 
 (defn make-verts [verts cell from to] 
   (let [angle (mod4 (- from to))
@@ -48,38 +48,44 @@
       3 (conj verts {:x cx :y cy :normal (nth normals (mod4 (+ to 2)))})
       )))
 
-(defn walk-the-line [prefs cells cursor]
+(defn single-cell-verts [[x y]]
+    [{:x x :y y :normal [-1 -1]}
+     {:x (inc x) :y y :normal [1 -1]}
+     {:x (inc x) :y (inc y) :normal [1 1]}
+     {:x x :y (inc y) :normal [-1 1]}])
+
+(defn walk-the-line [prefs cells acc]
   (let [cells (into #{} cells) ;; TODO: make sure cells is a set to begin with, then delete
-        {:keys [cell to from verts n]} cursor
+        {:keys [cell to from verts n done?]} acc
         neighbours (cell-neighbours prefs cell)
         next-cell (nth neighbours to)]
-    (cond  ;; TODO: cond changes the cursor. Recursive call is made afterwards with changed cursor.
-      (empty? cells) verts
-      (every? #(or (nil? %) (not (contains? cells %))) neighbours)
-        (let [[x y] cell]
-          [{:x x :y y :normal [-1 -1]}
-           {:x (inc x) :y y :normal [1 -1]}
-           {:x (inc x) :y (inc y) :normal [1 1]}
-           {:x x :y (inc y) :normal [-1 1]}])
-      (and (>= (count verts) 4) 
-           (or (= (first verts) (last verts)) (= (first verts) (first (take-last 2 verts)))))
-        (butlast verts)
-      (contains? cells next-cell)
-        (let [new-cursor (-> cursor 
-                             (assoc :cell next-cell) 
-                             (assoc :from to)
-                             (update :n inc)
-                             (update :to (comp mod4 dec)))]
-          (if (nil? from)
-            (walk-the-line prefs cells new-cursor)
-            (walk-the-line prefs cells 
-                           (-> new-cursor
-                               (assoc :verts (make-verts verts cell from to)))))) 
-      :else
-        (walk-the-line prefs cells (-> cursor 
-                                       (update :to (comp mod4 inc))
-                                       (update :n inc)))
-      )))
+    (if done? 
+      verts
+      (recur prefs cells 
+             (cond
+               (empty? cells) (assoc acc :done? true)
+               (every? #(or (nil? %) (not (contains? cells %))) neighbours)
+               (-> acc 
+                   (assoc :verts (single-cell-verts cell))
+                   (assoc :done? true))
+               (and (>= (count verts) 4) 
+                    (or (= (first verts) (last verts)) (= (first verts) (first (take-last 2 verts)))))
+               (-> acc
+                   (update :verts butlast)
+                   (assoc :done? true))
+               (contains? cells next-cell)
+               (let [new-acc (-> acc 
+                                    (assoc :cell next-cell) 
+                                    (assoc :from to)
+                                    (update :n inc)
+                                    (update :to (comp mod4 dec)))] 
+                 (if (nil? from) 
+                   (update new-acc :verts identity) 
+                   (assoc new-acc :verts (make-verts verts cell from to)))) ;; TODO: check equal verts right here and set done to true (if equal)
+               :else 
+               (-> acc 
+                   (update :to (comp mod4 inc))
+                   (update :n inc)))))))
 
 (defn panel 
   [prefs [i panel]]
@@ -89,9 +95,9 @@
           offset (/ (prefs :gutter-width) 2)
           rc (colors i)
           [x y :as cell] (upper-left-corner cells)
-          cursor {:cell cell :to 2 :from nil
-                  :verts []}
-          verts (walk-the-line prefs cells cursor)]
+          acc {:cell cell :to 2 :from nil
+               :verts []}
+          verts (walk-the-line prefs cells acc)]
       [:g {:color rc}
        [:polygon {:key "poly"
                   :points (join " " (for [{:keys [x y] [nx ny] :normal} verts] 
