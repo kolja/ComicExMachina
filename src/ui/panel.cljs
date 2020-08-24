@@ -26,6 +26,20 @@
 (defn upper-left-corner [cells]
   (or (first (sort-by (juxt first second) cells)) []))
 
+(defn bounding-box 
+  "returns a bounding box [upper-left lower-right] that encompasses all cells"
+  [cells]
+  (let [byx (sort-by first cells)
+        byy (sort-by second cells)]
+    [[(ffirst byx) (second (first byy))]
+     [(first (last byx)) (second (last byy))]]))
+
+(defn in-bounding-box? 
+  "is the cell within the bounding box?"
+  [[[bx1 by1] [bx2 by2]] [x y]]  
+  (and (<= bx1 x bx2) 
+       (<= by1 y by2)))
+
 (defn rotate [[cx cy] n] 
   (nth (map (fn [[x y]] [(+ cx x) (+ cy y)]) 
             [[0 0][1 0][1 1][0 1]]) 
@@ -104,6 +118,14 @@
                                       (str (- (* cell-width x) (* offset nx)) "," 
                                            (- (* cell-height y) (* offset ny)))))
                   :stroke "black"
-                  :fill "currentcolor"}]]
+                  :fill "currentcolor"}]
+       (for-indexed [[i c] cells] 
+                    ^{:key (str "circle-" i)} [:circle {:cx (* cell-width (+ 0.5 (first c))) 
+                                                        :cy (* cell-height (+ 0.5 (last c)))
+                                                        :r "5"
+                                                        :stroke "black"
+                                                        :stroke-width "2"
+                                                        :fill "currentcolor" }])
+       ]
       )))
 
