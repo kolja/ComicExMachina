@@ -40,7 +40,7 @@
             current-page  (r/cursor state [:pages @page-num])]
         [:div.root {:key "root"}
          [overview preferences all-pages page-num]
-         ^{:key "page"} [page preferences current-page]])
+         ^{:key (str "page-" @page-num)} [page preferences current-page]])
       )
     ))
 

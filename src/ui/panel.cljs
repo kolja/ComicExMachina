@@ -26,19 +26,7 @@
 (defn upper-left-corner [cells]
   (or (first (sort-by (juxt first second) cells)) []))
 
-(defn bounding-box 
-  "returns a bounding box [upper-left lower-right] that encompasses all cells"
-  [cells]
-  (let [byx (sort-by first cells)
-        byy (sort-by second cells)]
-    [[(ffirst byx) (second (first byy))]
-     [(first (last byx)) (second (last byy))]]))
 
-(defn in-bounding-box? 
-  "is the cell within the bounding box?"
-  [[[bx1 by1] [bx2 by2]] [x y]]  
-  (and (<= bx1 x bx2) 
-       (<= by1 y by2)))
 
 (defn rotate [[cx cy] n] 
   (nth (map (fn [[x y]] [(+ cx x) (+ cy y)]) 
@@ -74,13 +62,14 @@
         neighbours (cell-neighbours prefs cell)
         next-cell (nth neighbours to)]
     (if done? 
-      verts
+      acc
       (recur prefs cells 
              (cond
                (empty? cells) (assoc acc :done? true)
                (every? #(or (nil? %) (not (contains? cells %))) neighbours)
                (-> acc 
                    (assoc :verts (single-cell-verts cell))
+                   (assoc :visited-cells #{cell})
                    (assoc :done? true))
                (and (>= (count verts) 4) 
                     (or (= (first verts) (last verts)) (= (first verts) (first (take-last 2 verts)))))
@@ -89,10 +78,11 @@
                    (assoc :done? true))
                (contains? cells next-cell)
                (let [new-acc (-> acc 
-                                    (assoc :cell next-cell) 
-                                    (assoc :from to)
-                                    (update :n inc)
-                                    (update :to (comp mod4 dec)))] 
+                                 (assoc :cell next-cell) 
+                                 (update :visited-cells conj next-cell)
+                                 (assoc :from to)
+                                 (update :n inc)
+                                 (update :to (comp mod4 dec)))] 
                  (if (nil? from) 
                    (update new-acc :verts identity) 
                    (assoc new-acc :verts (make-verts verts cell from to)))) ;; TODO: check equal verts right here and set done to true (if equal)
@@ -101,17 +91,94 @@
                    (update :to (comp mod4 inc))
                    (update :n inc)))))))
 
+
+(defn deg [a] (/ 360 (/ (* 2 (Math/PI)) a)))
+
+(defn angle [cell [v1 v2]]
+  (let [[x y] cell
+        {v1x :x v1y :y} v1
+        {v2x :x v2y :y} v2
+        ax (- v1x x)
+        ay (- v1y y)
+        bx (- v2x x)
+        by (- v2y y)
+        direction (if (pos? (- (* by ax) (* ay bx))) 1 -1)]
+    (* direction (.acos js/Math
+                        (/ (+ (* ax bx) 
+                              (* ay by)) 
+                           (.sqrt js/Math 
+                                  (* (+ (* ax ax) (* ay ay)) 
+                                     (+ (* bx bx) (* by by)))))))))
+
+(defn winding-number 
+  "calculates the winding number and returns if it's (roughly) smaller than tau (aka 2 x PI)"
+  [cell verts]
+  (->> (partition 2 1 (conj verts (first verts)))
+       (map (fn [vs] (angle cell vs)))
+       (apply +)))
+
+(defn inside? [cell verts]
+  (< 3 (winding-number cell verts)))
+
+(defn bounding-box 
+  "returns a bounding box [upper-left lower-right] that encompasses all cells"
+  [verts]
+  (let [xs (sort-by :x verts)
+        ys (sort-by :y verts)]
+    [[(get (first xs) :x) (get (first ys) :y)]
+     [(get (last  xs) :x) (get (last  ys) :y)]]))
+
+(defn in-bounding-box? 
+  "is the cell within the bounding box?"
+  [[[bx1 by1] [bx2 by2]] [x y]]  
+  (and (<= bx1 x bx2) 
+       (<= by1 y by2)))
+
+(defn cells-in-bb [[[x1 y1] [x2 y2]]]
+  (for [x (range x1 x2) 
+        y (range y1 y2)]
+    [x y]))
+
+(defn cleanup 
+  "reset this panels boundry box
+  list of all cells in this boundry box, minus cells visited by 'walk-the-line' 
+  for each remaining cell: 
+    sum of angles between it and all the verts (aka: calculate winding-number)
+    zero? discard. otherwise add it to visited cells.
+  return visited cells (so the panel's cells can be updated)"
+  [panel visited-cells verts]
+  (let [bb             (bounding-box verts)
+        cells          (cells-in-bb bb)       
+        cells-to-check (remove visited-cells cells)]
+    (swap! panel assoc :bounding-box bb)
+    (concat
+      visited-cells
+      (for [cell cells-to-check :when (inside? [(+ (first cell) 0.5) (+ (last cell) 0.5)] verts)] cell)
+      ))
+
+    ; TODO: in page (global cells) update references to this panel.
+    ; perhaps pass those global cells down to the panel.
+  )
+
 (defn panel 
-  [prefs [i panel]]
-  (fn [prefs [i panel]] 
+  [prefs panel i]
+  (fn [prefs panel i] 
     (let [[cell-width cell-height] (prefs :cell-dimensions)
-          cells (panel :cells)
-          offset (/ (prefs :gutter-width) 2)
-          rc (colors i)
-          [x y :as cell] (upper-left-corner cells)
-          acc {:cell cell :to 2 :from nil
-               :verts []}
-          verts (walk-the-line prefs cells acc)]
+          cells                    (@panel :cells) ;; will be rebound after 'walk-the-line'
+          offset                   (/ (prefs :gutter-width) 2)
+          rc                       (colors i)
+          [x y :as cell]           (upper-left-corner cells)
+          acc                      {:cell cell 
+                                    :visited-cells #{}
+                                    :to 2 
+                                    :from nil
+                                    :verts []}
+          {:keys [verts visited-cells]}   (walk-the-line prefs cells acc)
+          cells                    (if (empty? verts) []
+                                      (cleanup panel visited-cells verts))]
+
+      (swap! panel assoc :cells cells)
+
       [:g {:color rc}
        [:polygon {:key "poly"
                   :points (join " " (for [{:keys [x y] [nx ny] :normal} verts] 
