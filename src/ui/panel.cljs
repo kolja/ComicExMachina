@@ -154,16 +154,13 @@
     (concat
       visited-cells
       (for [cell cells-to-check :when (inside? [(+ (first cell) 0.5) (+ (last cell) 0.5)] verts)] cell)
-      ))
-
-    ; TODO: in page (global cells) update references to this panel.
-    ; perhaps pass those global cells down to the panel.
-  )
+      )))
 
 (defn panel 
-  [prefs panel i]
-  (fn [prefs panel i] 
+  [prefs page i]
+  (fn [prefs page i] 
     (let [[cell-width cell-height] (prefs :cell-dimensions)
+          panel                    (r/cursor page [:panels i])
           cells                    (@panel :cells) ;; will be rebound after 'walk-the-line'
           offset                   (/ (prefs :gutter-width) 2)
           rc                       (colors i)
@@ -178,6 +175,13 @@
                                       (cleanup panel visited-cells verts))]
 
       (swap! panel assoc :cells cells)
+      (swap! page update :cells 
+             (fn [c]
+               (let [c1 (apply dissoc c (->> c
+                                             (filter #(= i (second %))) 
+                                             (map first)))] ; remove all cells that belong to panel 'i'
+                 (apply assoc c1 (interleave cells (repeat i)))))) ; ...then add all the cells back
+     
 
       [:g {:color rc}
        [:polygon {:key "poly"
@@ -185,14 +189,5 @@
                                       (str (- (* cell-width x) (* offset nx)) "," 
                                            (- (* cell-height y) (* offset ny)))))
                   :stroke "black"
-                  :fill "currentcolor"}]
-       (for-indexed [[i c] cells] 
-                    ^{:key (str "circle-" i)} [:circle {:cx (* cell-width (+ 0.5 (first c))) 
-                                                        :cy (* cell-height (+ 0.5 (last c)))
-                                                        :r "5"
-                                                        :stroke "black"
-                                                        :stroke-width "2"
-                                                        :fill "currentcolor" }])
-       ]
-      )))
+                  :fill "currentcolor"}]])))
 

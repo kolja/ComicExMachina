@@ -70,10 +70,8 @@
               :on-mouse-up mouse-up
               }
         (for [i (range (count @panels))]
-          ^{:key (str "panel-" i)} [panel prefs (r/cursor page [:panels i]) i]
-          )
+          ^{:key (str "panel-" i)} [panel prefs page i]
+          )]])))
 
-        #_(for-indexed [p panels] ^{:key (str "panel-" (first p))} [panel prefs p])
 
-        ]
-       ])))
+
