@@ -24,17 +24,19 @@
   (swap! page update-in [:panels @active-panel :cells] conj cell)
   (swap! page update-in [:cells] assoc cell @active-panel))
 
-(defn mouse-down [prefs page e]
-  (let [[x y] (offset e)
-        panels (@page :panels)
-        cells (@page :cells)
-        [cellx celly] (prefs :cell-dimensions)
-        cell [(quot x cellx) (quot y celly)]]
-    (if (cells cell) 
-      (reset! active-panel (cells cell))
-      (new-panel-with-cell page panels cells cell))))
+(defn mouse-down [prefs appstate page e]
+  (when (= (@appstate :tool) :panels)
+    (let [[x y] (offset e)
+          panels (@page :panels)
+          cells (@page :cells)
+          [cellx celly] (prefs :cell-dimensions)
+          cell [(quot x cellx) (quot y celly)]]
+      (if (cells cell) 
+        (reset! active-panel (cells cell))
+        (new-panel-with-cell page panels cells cell)))))
 
-(defn mouse-move [prefs page e]
+(defn mouse-move [prefs appstate page e]
+  (when (= (@appstate :tool) :panels)
     (let [[x y] (offset e)
         panels (@page :panels)
         cells (@page :cells)
@@ -44,15 +46,19 @@
         (if (cells cell) ;; cell exists
           (when-not (= (cells cell) @active-panel)
             (migrate-cell page panels cells cell))
-          (new-panel-with-cell page panels cells cell))))) ;; new *panel* on mousemove? fix!
+          (new-panel-with-cell page panels cells cell)))))) ;; new *panel* on mousemove? fix!
 
-(defn mouse-up [e]
+(defn mouse-up [e] ;; TODO: active-panel has to go to the appstate
   (reset! active-panel nil))
 
-(defn page [preferences page]
-  (fn [preferences page]
-    (let [prefs @preferences
-          {:keys [width height current-page]} prefs
+(defn page [state]
+  (fn [state]
+    (let [page-num      (get-in @state [:appstate :current-page])     
+          page          (r/cursor state [:pages page-num])
+          preferences   (r/cursor state [:preferences])
+          appstate      (r/cursor state [:appstate])
+          prefs @preferences
+          {:keys [width height]} prefs
           panels  (r/cursor page [:panels])]
       [:div.page {:key (random-uuid)  
                :style {:margin "40px"
@@ -65,12 +71,12 @@
               :height height 
               :view-box [0 0 width height]
               :xmlns "http://www.w3.org/2000/svg"
-              :on-mouse-down (partial mouse-down prefs page)
-              :on-mouse-move (partial mouse-move prefs page)
+              :on-mouse-down (partial mouse-down prefs appstate page)
+              :on-mouse-move (partial mouse-move prefs appstate page)
               :on-mouse-up mouse-up
               }
         (for [i (range (count @panels))]
-          ^{:key (str "panel-" i)} [panel prefs page i]
+          ^{:key (str "panel-" i)} [panel prefs appstate page i]
           )]])))
 
 

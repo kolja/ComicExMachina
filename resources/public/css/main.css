@@ -1,6 +1,7 @@
 :root {
     background-color: #111;
 }
+
 ol {
     margin: 0;
     padding: 0;
@@ -11,6 +12,23 @@ html {
 
 *, *:before, *:after {
     box-sizing: inherit;
+}
+button {
+  border: 1px solid #777;
+  background-color: transparent;
+  color: #aaa;
+  font-family: inherit;
+  padding: 3;
+  cursor: pointer;
+}
+
+button:focus,
+button:active:focus,
+button.active:focus,
+button.focus,
+button:active.focus,
+button.active.focus {
+    outline: none !important;
 }
 
 html, body, #app {
@@ -82,3 +100,12 @@ body, input {
 }
 
 .page svg {background-color: #eee;}
+
+.tools {
+    background-color: #222;
+    color: #ccc;
+}
+.tools .current {
+    background-color: #ccc;
+    color: #222;
+}

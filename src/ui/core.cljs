@@ -5,13 +5,18 @@
             [tools.devtools :refer [log]]
             [ui.overview :refer [overview]]
             [ui.page :refer [page]]
+            [ui.tools :refer [tools]]
             [oops.core :refer [ocall]]))
 
 (enable-console-print!)
 
 (defonce state (r/atom {
                         :id 0
-                        :current-page 1
+                        :appstate {
+                          :current-page 1
+                          :tool :panels ; :panels :drawing
+                          :drawing? false
+                        }
                         :preferences {
                                       :gutter-width 6
                                       :grid-width 12
@@ -28,19 +33,17 @@
 
   (let [preferences (@state :preferences)
         {:keys [width height grid-width grid-height]} preferences]
+
     (swap! state assoc-in [:preferences :cell-dimensions]
-           [(/ width grid-width)
+           [(/ width  grid-width)
             (/ height grid-height)])
 
     (fn [state]
-      (let [preferences   (r/cursor state [:preferences])
-            prefs         @preferences
-            all-pages     (r/cursor state [:pages])
-            page-num      (r/cursor state [:current-page])
-            current-page  (r/cursor state [:pages @page-num])]
+      (let [page-num (get-in @state [:appstate :current-page])]
         [:div.root {:key "root"}
-         [overview preferences all-pages page-num]
-         ^{:key (str "page-" @page-num)} [page preferences current-page]])
+         [overview state]
+         ^{:key (str "page-" page-num)} [page state]
+         [tools state]])
       )
     ))
 

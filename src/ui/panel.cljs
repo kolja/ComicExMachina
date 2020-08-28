@@ -1,6 +1,7 @@
 (ns ui.panel
   (:require [reagent.core :as r]
             [reagent.dom :as rd]
+            [ui.drawing-area :refer [drawing-area]]
             [clojure.string :refer [join]]
             [tools.devtools :refer [log]]
             [tools.helpers :refer [for-indexed]]
@@ -25,8 +26,6 @@
 
 (defn upper-left-corner [cells]
   (or (first (sort-by (juxt first second) cells)) []))
-
-
 
 (defn rotate [[cx cy] n] 
   (nth (map (fn [[x y]] [(+ cx x) (+ cy y)]) 
@@ -90,9 +89,6 @@
                (-> acc 
                    (update :to (comp mod4 inc))
                    (update :n inc)))))))
-
-
-(defn deg [a] (/ 360 (/ (* 2 (Math/PI)) a)))
 
 (defn angle [cell [v1 v2]]
   (let [[x y] cell
@@ -158,7 +154,7 @@
 
 (defn panel 
   [prefs page i]
-  (fn [prefs page i] 
+  (fn [prefs appstate page i] 
     (let [[cell-width cell-height] (prefs :cell-dimensions)
           panel                    (r/cursor page [:panels i])
           cells                    (@panel :cells) ;; will be rebound after 'walk-the-line'
@@ -174,7 +170,7 @@
           cells                    (if (empty? verts) []
                                       (cleanup panel visited-cells verts))]
 
-      (swap! panel assoc :cells cells)
+      (swap! panel assoc :cells cells :verts verts)
       (swap! page update :cells 
              (fn [c]
                (let [c1 (apply dissoc c (->> c
@@ -189,5 +185,7 @@
                                       (str (- (* cell-width x) (* offset nx)) "," 
                                            (- (* cell-height y) (* offset ny)))))
                   :stroke "black"
-                  :fill "currentcolor"}]])))
+                  :fill "currentcolor"}]
+       [drawing-area prefs appstate panel]
+       ])))
 
