@@ -61,22 +61,16 @@
           offset  (/ (prefs :gutter-width) 2)]
 
       [:defs
-        [:clipPath {:key (str "clippath")
-                    :id (str "clip")
-                    ; :clipPathUnits "objectBoundingBox" 
-                    }
        (for [panel-id (range (count panels))]
+         [:clipPath {:key (str "clippath-" panel-id)
+                     :id (str "clip-" panel-id)}
           [:polygon {:key (str "polyclip-" panel-id)
                      :points (join " " (for [{:keys [x y] [nx ny] :normal} (get-in panels [panel-id :verts])] 
                                          (str (- (* cw x) (* offset nx)) "," 
                                               (- (* ch y) (* offset ny)))))
-
-                     ; :fill "black"
                      :stroke "yellow"
                      :stroke-width 6
-                     }])
-         ]
-       ]
+                     }]])]
       )))
 
 (defn page [state]

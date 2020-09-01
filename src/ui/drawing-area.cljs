@@ -49,7 +49,7 @@
           ]
 
       [:g 
-       {:style {:clip-path (str "url(\u0023clip)")}}
+       {:style {:clip-path (str "url(\u0023clip-" panel-id ")")}}
        [:polygon {:key "mouse-area"
                   :points (join " " (for [{:keys [x y] [nx ny] :normal} verts] 
                                       (str (* cw x)  ", " (* ch y))))
