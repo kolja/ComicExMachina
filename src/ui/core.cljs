@@ -14,6 +14,7 @@
                         :id 0
                         :appstate {
                           :current-page 1
+                          :active-panel nil
                           :tool :panels ; :panels :drawing
                           :drawing? false
                         }

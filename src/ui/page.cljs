@@ -1,6 +1,7 @@
 (ns ui.page
   (:require [reagent.core :as r]
             [reagent.dom :as rd]
+            [clojure.string :refer [join]]
             [ui.panel :refer [panel]]
             [tools.devtools :refer [log]]
             [tools.helpers :refer [for-indexed]]
@@ -48,8 +49,35 @@
             (migrate-cell page panels cells cell))
           (new-panel-with-cell page panels cells cell)))))) ;; new *panel* on mousemove? fix!
 
-(defn mouse-up [e] ;; TODO: active-panel has to go to the appstate
+(defn mouse-up [appstate e] ;; TODO: use active-panel from the appstate
+  (swap! appstate assoc :drawing? false)
   (reset! active-panel nil))
+
+(defn clip-paths [prefs panels]
+  (fn [prefs panels]
+
+    (let [panels  @panels
+          [cw ch] (prefs :cell-dimensions)
+          offset  (/ (prefs :gutter-width) 2)]
+
+      [:defs
+        [:clipPath {:key (str "clippath")
+                    :id (str "clip")
+                    ; :clipPathUnits "objectBoundingBox" 
+                    }
+       (for [panel-id (range (count panels))]
+          [:polygon {:key (str "polyclip-" panel-id)
+                     :points (join " " (for [{:keys [x y] [nx ny] :normal} (get-in panels [panel-id :verts])] 
+                                         (str (- (* cw x) (* offset nx)) "," 
+                                              (- (* ch y) (* offset ny)))))
+
+                     ; :fill "black"
+                     :stroke "yellow"
+                     :stroke-width 6
+                     }])
+         ]
+       ]
+      )))
 
 (defn page [state]
   (fn [state]
@@ -73,8 +101,9 @@
               :xmlns "http://www.w3.org/2000/svg"
               :on-mouse-down (partial mouse-down prefs appstate page)
               :on-mouse-move (partial mouse-move prefs appstate page)
-              :on-mouse-up mouse-up
+              :on-mouse-up (partial mouse-up appstate)
               }
+        [clip-paths prefs panels]
         (for [i (range (count @panels))]
           ^{:key (str "panel-" i)} [panel prefs appstate page i]
           )]])))

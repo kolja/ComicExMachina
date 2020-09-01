@@ -152,8 +152,15 @@
       (for [cell cells-to-check :when (inside? [(+ (first cell) 0.5) (+ (last cell) 0.5)] verts)] cell)
       )))
 
+(defn remove-disconnected [cells panel-id]
+    (fn [c]
+      (let [c1 (apply dissoc c (->> c
+                                    (filter #(= panel-id (second %))) 
+                                    (map first))) ] ; remove all cells that belong to panel 'i'
+        (merge c1 (zipmap cells (repeat panel-id))))))
+
 (defn panel 
-  [prefs page i]
+  [prefs appstate page i]
   (fn [prefs appstate page i] 
     (let [[cell-width cell-height] (prefs :cell-dimensions)
           panel                    (r/cursor page [:panels i])
@@ -171,21 +178,16 @@
                                       (cleanup panel visited-cells verts))]
 
       (swap! panel assoc :cells cells :verts verts)
-      (swap! page update :cells 
-             (fn [c]
-               (let [c1 (apply dissoc c (->> c
-                                             (filter #(= i (second %))) 
-                                             (map first)))] ; remove all cells that belong to panel 'i'
-                 (apply assoc c1 (interleave cells (repeat i)))))) ; ...then add all the cells back
+      (swap! page update :cells (remove-disconnected cells i))
      
-
-      [:g {:color rc}
+      [:g
        [:polygon {:key "poly"
                   :points (join " " (for [{:keys [x y] [nx ny] :normal} verts] 
                                       (str (- (* cell-width x) (* offset nx)) "," 
                                            (- (* cell-height y) (* offset ny)))))
                   :stroke "black"
-                  :fill "currentcolor"}]
-       [drawing-area prefs appstate panel]
+                  :stroke-width 2
+                  :fill "white"}]
+       [drawing-area prefs appstate panel i]
        ])))
 
