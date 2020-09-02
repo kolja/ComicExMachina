@@ -146,7 +146,6 @@
   (let [bb             (bounding-box verts)
         cells          (cells-in-bb bb)       
         cells-to-check (remove visited-cells cells)]
-    (swap! panel assoc :bounding-box bb)
     (concat
       visited-cells
       (for [cell cells-to-check :when (inside? [(+ (first cell) 0.5) (+ (last cell) 0.5)] verts)] cell)
@@ -177,8 +176,11 @@
           cells                    (if (empty? verts) []
                                       (cleanup panel visited-cells verts))]
 
-      (swap! panel assoc :cells cells :verts verts)
-      (swap! page update :cells (remove-disconnected cells i))
+      (when-not (= (@panel :verts) verts) ; avoid unnecessary updates
+        (swap! panel assoc :cells cells 
+                           :verts verts
+                           :bounding-box (bounding-box verts))
+        (swap! page update :cells (remove-disconnected cells i)))
      
       [:g
        [:polygon {:key "poly"
