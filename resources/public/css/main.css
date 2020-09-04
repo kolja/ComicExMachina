@@ -20,6 +20,7 @@ button {
   font-family: inherit;
   padding: 3;
   cursor: pointer;
+  user-select: none
 }
 
 button:focus,
@@ -95,10 +96,6 @@ body, input {
     border: solid 1px #aaa;
 }
 
-/*.page {                     */
-/*    background-color: white;*/
-/*}                           */
-
 svg {
     background-color: #eee;
 }
@@ -107,11 +104,3 @@ svg {
     display: flex;
 }
 
-.tools {
-    background-color: #222;
-    color: #ccc;
-}
-.tools .current {
-    background-color: #ccc;
-    color: #222;
-}

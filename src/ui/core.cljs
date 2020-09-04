@@ -5,7 +5,7 @@
             [tools.devtools :refer [log]]
             [ui.overview :refer [overview]]
             [ui.page :refer [spread-page]]
-            [ui.tools :refer [tools]]
+            [ui.toolbar :refer [toolbar]]
             [oops.core :refer [ocall]]))
 
 (enable-console-print!)
@@ -58,7 +58,7 @@
           (for [[l r] (partition 2 2 [0] (range (count pages)))] ; 0 for padding. Page 0 is always blank. Could be first or last.
             ^{:key (str "page-" l "-" r)} 
             [spread-page state l r])]
-         [tools state]])
+         [toolbar state]])
       )
     ))
 

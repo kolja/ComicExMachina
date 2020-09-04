@@ -75,25 +75,26 @@
                      :stroke-width 6
                      }]])])))
 
-(defn grid [state]
-  (fn [state]
+(defn grid [state page-num]
+  (fn [state page-num]
     (let [{:keys [preferences appstate]} @state
-          current-page                  (get appstate :current-page)
           {:keys [grid-width grid-height] [cw ch] :cell-dimensions m :margin} 
                                         preferences
-          is-left?                      (zero? (quot current-page 2))
+          grid-gray                     "#ddd"
+          is-left?                      (zero? (mod page-num 2))
 
           [m0 m1 m2 m3]                 (if is-left? [(m 0) (m 1) (m 2) (m 3)]
                                                      [(m 0) (m 3) (m 2) (m 1)])]
       
-      [:g {:fill "#bbb"}
+      [:g {:fill grid-gray}
         [:rect {
                 :x (* cw m3) :y (* ch m0) :width (* cw (- grid-width m1 m3)) :height (* ch (- grid-height m1 m3))
                 }]
         (when (not is-left?) 
           [:line 
-           {:stroke-width 4
-            :stroke-dasharray "7 7" :x1 0 :y1 0 :x2 0 :y2 (* ch grid-height)}])]
+           {:stroke-width 2
+            :stroke "#ccc"
+            :stroke-dasharray "7,7" :x1 1 :y1 1 :x2 1 :y2 (* ch grid-height)}])]
       )))
 
 (defn page [state page-num]
@@ -116,7 +117,7 @@
               :on-mouse-up (partial mouse-up appstate)
               }
         [clip-paths @preferences page-num panels]
-        [grid state]
+        [grid state page-num]
         (for [panel-id (range (count @panels))]
           ^{:key (str "panel-" panel-id)} [panel state page-num panel-id]
           )])))
