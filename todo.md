@@ -12,7 +12,8 @@
     [ ] Support different line-styles (and no-outline) on per-layer (per Panel?) basis
     [ ] Support different gutter-width per layer.
 [ ] Allow for Vertices to be moved
-[ ] Bugfix: when removing a cell (a whole Panel?) there can be a nil/nil pair in global cells hash. Also: Empty panels need to be removed.
+[x] Bugfix: when removing a cell (a whole Panel?) there can be a nil/nil pair in global cells hash.
+[ ] Empty panels need to be removed.
 
 --
 [ ] move drawing content tool (aka "hand" tool)

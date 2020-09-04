@@ -36,9 +36,12 @@
     (swap! appstate assoc :drawing? false))
   )
 
-(defn drawing-area [prefs appstate panel panel-id]
-  (fn [prefs appstate panel panel-id]
+(defn drawing-area [state page-num panel-id]
+  (fn [state page-num panel-id]
     (let [
+          panel                     (r/cursor state [:pages page-num :panels panel-id])
+          prefs                     (get @state :preferences)
+          appstate                  (r/cursor state [:appstate])
           [cw ch]                   (prefs :cell-dimensions)
           verts                     (@panel :verts)
           offset                    (/ (prefs :gutter-width) 2)
@@ -49,7 +52,7 @@
           ]
 
       [:g 
-       {:style {:clip-path (str "url(\u0023clip-" panel-id ")")}}
+       {:style {:clip-path (str "url(\u0023clip-" page-num "-" panel-id ")")}}
        [:polygon {:key "mouse-area"
                   :points (join " " (for [{:keys [x y] [nx ny] :normal} verts] 
                                       (str (* cw x)  ", " (* ch y))))

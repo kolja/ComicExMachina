@@ -159,13 +159,15 @@
         (merge c1 (zipmap cells (repeat panel-id))))))
 
 (defn panel 
-  [prefs appstate page i]
-  (fn [prefs appstate page i] 
-    (let [[cell-width cell-height] (prefs :cell-dimensions)
-          panel                    (r/cursor page [:panels i])
+  [state page-num panel-id]
+  (fn [state page-num panel-id] 
+    (let [prefs                    (get @state :preferences)
+          [cell-width cell-height] (prefs :cell-dimensions)
+          page                     (r/cursor state [:pages page-num])
+          panel                    (r/cursor page [:panels panel-id])
           cells                    (@panel :cells) ;; will be rebound after 'walk-the-line'
           offset                   (/ (prefs :gutter-width) 2)
-          rc                       (colors i)
+          rc                       (colors panel-id)
           [x y :as cell]           (upper-left-corner cells)
           acc                      {:cell cell 
                                     :visited-cells #{}
@@ -180,7 +182,7 @@
         (swap! panel assoc :cells cells 
                            :verts verts
                            :bounding-box (bounding-box verts))
-        (swap! page update :cells (remove-disconnected cells i)))
+        (swap! page update :cells (remove-disconnected cells panel-id)))
      
       [:g
        [:polygon {:key "poly"
@@ -190,6 +192,6 @@
                   :stroke "black"
                   :stroke-width 2
                   :fill "white"}]
-       [drawing-area prefs appstate panel i]
+       [drawing-area state page-num panel-id]
        ])))
 

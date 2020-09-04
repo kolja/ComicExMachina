@@ -95,11 +95,17 @@ body, input {
     border: solid 1px #aaa;
 }
 
-.page {
-    background-color: white;
-}
+/*.page {                     */
+/*    background-color: white;*/
+/*}                           */
 
-.page svg {background-color: #eee;}
+svg {
+    background-color: #eee;
+}
+.spread {
+    margin: 15px;
+    display: flex;
+}
 
 .tools {
     background-color: #222;
