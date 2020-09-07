@@ -7,23 +7,23 @@
 
 (enable-console-print!)
 
-(defn offset [e] ; TODO: This function was copy-pasted from page. Perhaps keep mouse-event related stuff in one place?
+(defn offset [scale e] ; TODO: This function was copy-pasted from page. Perhaps keep mouse-event related stuff in one place?
   (let [bound (ocall e "currentTarget.getBoundingClientRect")]
-    [(- (oget e :pageX) (oget bound :left))
-     (- (oget e :pageY) (oget bound :top))]))
+    [(/ (- (oget e :pageX) (oget bound :left)) scale)
+     (/ (- (oget e :pageY) (oget bound :top)) scale)]))
 
 (defn mouse-down [appstate panel e]
   (when (= (@appstate :tool) :drawing)
     (do
-      (swap! appstate assoc :drawing? true)
+      (swap! appstate assoc :active? true)
       (if (empty? (@panel :strokes))
-        (swap! panel assoc :strokes [{:verts [(offset e)]}])
-        (swap! panel update-in [:strokes] conj {:verts [(offset e)]})))))
+        (swap! panel assoc :strokes [{:verts [(offset (get @appstate :scale) e)]}])
+        (swap! panel update-in [:strokes] conj {:verts [(offset (get @appstate :scale) e)]})))))
 
 (defn mouse-move [appstate panel e]
-  (when (@appstate :drawing?)
+  (when (@appstate :active?)
     (let [last-stroke (last (@panel :strokes))
-          new-stroke  (update-in last-stroke [:verts] conj (offset e))]
+          new-stroke  (update-in last-stroke [:verts] conj (offset (get @appstate :scale) e))]
       (swap! panel update-in [:strokes] 
              (fn [s] (conj (vec (butlast s)) 
                            new-stroke))
@@ -33,7 +33,7 @@
 
 (defn mouse-up [appstate panel]
   (when (= (@appstate :tool) :drawing)
-    (swap! appstate assoc :drawing? false))
+    (swap! appstate assoc :active? false))
   )
 
 (defn drawing-area [state page-num panel-id]
@@ -52,21 +52,25 @@
           ]
 
       [:g 
+
        {:style {:clip-path (str "url(\u0023clip-" page-num "-" panel-id ")")}}
        [:polygon {:key "mouse-area"
                   :points (join " " (for [{:keys [x y] [nx ny] :normal} verts] 
-                                      (str (* cw x)  ", " (* ch y))))
+                                      (str (- (* cw x) (* offset nx))  ", " (- (* ch y) (* offset ny)))))
 
                   :on-mouse-down (partial mouse-down appstate panel)
                   :on-mouse-move (partial mouse-move appstate panel)
                   :on-mouse-up   (partial mouse-up   appstate panel)
                   :fill "transparent"}]
 
+        ;; TODO: perhaps move the actual line-drawing to panel and this file is for drawing logic only?
         (for [s (range (count strokes))]
           [:polyline {:key (str "stroke-" s)
+                      :style {:pointer-events "none"}
                       :fill "none"
                       :stroke "#4a8ac7"
                       :transform (str "translate(" (join " " [(* cw bb1x) (* ch bb1y)]) ")")
                       :stroke-width 2
-                      :points (join " " (flatten (get-in strokes [s :verts])))}])]
+                      :points (join " " (flatten (get-in strokes [s :verts])))}])
+        ]
        )))

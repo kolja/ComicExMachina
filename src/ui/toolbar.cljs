@@ -32,17 +32,17 @@
 
           app-element  (ocall js/document :getElementById "app")
 
-          tools        {:box     {:text "box"    :icon "crop_din.svg"}
+          tools        {:panels  {:text "panels" :icon "library_add.svg"}
                         :drawing {:text "draw"   :icon "create.svg"}
-                        :add     {:text "add"    :icon "add_box.svg"}
-                        :hand    {:text "hand"   :icon "pan_tool.svg"}
+                        :delete  {:text "clear"  :icon "clear.svg"}
+                        :move    {:text "hand"   :icon "pan_tool.svg"}
                         :bubble  {:text "bubble" :icon "chat_bubble_outline.svg"}
+                        :box     {:text "box"    :icon "crop_din.svg"}
+                        :add     {:text "add"    :icon "add_box.svg"}
                         :remove  {:text "remove" :icon "remove_circle_outline.svg"}
-                        :clear   {:text "clear"  :icon "clear.svg"}
-                        :stack   {:text "stack"  :icon "filter_none.svg"}
-                        :panels  {:text "panels" :icon "library_add.svg"}}
+                        :stack   {:text "stack"  :icon "filter_none.svg"}}
 
-          toolbar       [:panels :drawing :clear :hand :bubble]
+          toolbar       [:panels :drawing :move :delete :bubble]
 
           color         {:bg "#333"
                          :bg-current "#444"

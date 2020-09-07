@@ -6,7 +6,7 @@
             [ui.overview :refer [overview]]
             [ui.page :refer [spread-page]]
             [ui.toolbar :refer [toolbar]]
-            [oops.core :refer [ocall]]))
+            [oops.core :refer [oget ocall]]))
 
 (enable-console-print!)
 
@@ -16,8 +16,8 @@
                           :scale 1
                           :current-page 1
                           :active-panel nil
-                          :tool :panels ; :panels :drawing
-                          :drawing? false
+                          :tool :panels ; :panels :drawing :delete :move :bubble
+                          :active? false
                         }
                         :preferences {
                                       :gutter-width 6
@@ -33,23 +33,36 @@
                                  :cells {}} ;; empty doc at least contains one page
                                 ]}))
 
+(defn mouse-wheel [appstate e]
+  (let [s             (oget e :deltaX)
+        factor        (/ 1 500)
+        current-scale (get @appstate :scale)
+        new-scale     (+ current-scale (* factor s))
+        ]
+    (when (< 0.3 new-scale 5)
+      (swap! appstate assoc :scale new-scale))
+    ))
+
 (defn root [state]
 
   (let [preferences                                   (@state :preferences)
         {:keys [width height grid-width grid-height]} preferences ]
 
-    (swap! state assoc-in [:preferences :cell-dimensions]
+    (swap! state assoc-in [:preferences :cell-dimensions] ;; TODO: consider to do this inside the render function
            [(/ width  grid-width)
             (/ height grid-height)])
 
     (fn [state]
-      (let [{:keys [pages appstate preferneces]} @state
-            current-page (appstate :current-page)
-            current-spread (quot current-page 2)
-            page-height  (preferences :height)
-            offset-y (* -1 current-spread page-height)
+      (let [appstate                    (r/cursor state [:appstate])
+            scale                       (get @appstate :scale)
+            {:keys [pages preferneces]} @state
+            current-page                (@appstate :current-page)
+            current-spread              (quot current-page 2)
+            page-height                 (preferences :height)
+            offset-y                    (* -1 scale current-spread (+ 5 page-height))
             ]
-       [:div.root {:key "root"}
+       [:div.root {:key "root"
+                   :on-wheel (partial mouse-wheel appstate)}
          [overview state]
          [:div.spreads {:style {:position "relative"
                                 :transition "top 0.5s"

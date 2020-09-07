@@ -27,7 +27,9 @@
 
 (defn mouse-down [preferences appstate page e]
   (when (= (@appstate :tool) :panels)
-    (let [[x y] (offset e)
+    (let [
+          scale   (get @appstate :scale)
+          [x y] (map #(/ % scale) (offset e))
           prefs @preferences
           panels (@page :panels)
           cells (@page :cells)
@@ -39,7 +41,9 @@
 
 (defn mouse-move [preferences appstate page e]
   (when (= (@appstate :tool) :panels)
-    (let [[x y]         (offset e)
+    (let [
+          scale   (get @appstate :scale)
+          [x y] (map #(/ % scale) (offset e))
           prefs         @preferences
           active-panel  (get @appstate :active-panel)
           panels        (@page :panels)
@@ -52,8 +56,8 @@
             (migrate-cell appstate page panels cells cell))
           (new-panel-with-cell appstate page panels cells cell)))))) ;; new *panel* on mousemove? fix!
 
-(defn mouse-up [appstate e] ;; TODO: use active-panel from the appstate
-  (swap! appstate assoc :drawing? false 
+(defn mouse-up [appstate e]
+  (swap! appstate assoc :active? false 
                         :active-panel nil))
 
 (defn clip-paths [prefs page-num panels]
@@ -66,7 +70,7 @@
       [:defs
        (for [panel-id (range (count panels))]
          [:clipPath {:key (str "clippath-" page-num "-" panel-id)
-                     :id (str "clip-" panel-id)}
+                     :id (str "clip-" page-num "-" panel-id)}
           [:polygon {:key (str "polyclip-" panel-id)
                      :points (join " " (for [{:keys [x y] [nx ny] :normal} (get-in panels [panel-id :verts])] 
                                          (str (- (* cw x) (* offset nx)) "," 
@@ -124,17 +128,21 @@
 
 (defn blank [state]
   (fn [state]
-    (let [{:keys [width height]} (get @state :preferences)]
+    (let [scale                  (get-in @state [:appstate :scale])
+          {:keys [width height]} (get @state :preferences)]
     [:div.blank {
-           :style {:width width
-                   :height height
+           :style {:width (* scale width)
+                   :height (* scale height)
                    :background-color "#333"} }])))
 
 
 (defn spread-page [state l r]
   (fn [state l r]
-
-     [:div.spread 
-      (if (zero? l) [blank state] [page state l])
-      (if (zero? r) [blank state] [page state r])]))
+    (let [current-page (get-in @state [:appstate :current-page])]
+      (if (<= (- l 2) current-page (+ 2 r))
+        [:div.spread 
+         (if (zero? l) [blank state] [page state l])
+         (if (zero? r) [blank state] [page state r])]
+        [:div.spread
+         [blank state] [blank state]]))))
 
