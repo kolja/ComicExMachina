@@ -7,10 +7,18 @@
 
 (enable-console-print!)
 
-(defn offset [scale e] ; TODO: This function was copy-pasted from page. Perhaps keep mouse-event related stuff in one place?
-  (let [bound (ocall e "currentTarget.getBoundingClientRect")]
-    [(/ (- (oget e :pageX) (oget bound :left)) scale)
-     (/ (- (oget e :pageY) (oget bound :top)) scale)]))
+(defn offset [scale e]
+  (let [bound (ocall e "currentTarget.getBoundingClientRect")
+        bbox  (ocall e "currentTarget.getBBox")
+        s     (/ 1 scale)
+        pageX (oget e :pageX)
+        pageY (oget e :pageY)
+        left  (oget bound :left)
+        top   (oget bound :top)
+        x     (oget bbox :x)
+        y     (oget bbox :y)]
+    [(-> pageX (- left) (* s) (+ x))
+     (-> pageY (- top ) (* s) (+ y))]))
 
 (defn mouse-down [appstate panel e]
   (when (= (@appstate :tool) :drawing)
@@ -42,6 +50,7 @@
           panel                     (r/cursor state [:pages page-num :panels panel-id])
           prefs                     (get @state :preferences)
           appstate                  (r/cursor state [:appstate])
+          scale                     (get @appstate :scale)
           [cw ch]                   (prefs :cell-dimensions)
           verts                     (@panel :verts)
           offset                    (/ (prefs :gutter-width) 2)
@@ -53,10 +62,9 @@
 
       [:g 
 
-       {:style {:clip-path (str "url(\u0023clip-" page-num "-" panel-id ")")}}
        [:polygon {:key "mouse-area"
                   :points (join " " (for [{:keys [x y] [nx ny] :normal} verts] 
-                                      (str (- (* cw x) (* offset nx))  ", " (- (* ch y) (* offset ny)))))
+                                      (str (* cw x)  ", " (* ch y))))
 
                   :on-mouse-down (partial mouse-down appstate panel)
                   :on-mouse-move (partial mouse-move appstate panel)
@@ -66,10 +74,11 @@
         ;; TODO: perhaps move the actual line-drawing to panel and this file is for drawing logic only?
         (for [s (range (count strokes))]
           [:polyline {:key (str "stroke-" s)
-                      :style {:pointer-events "none"}
+                      :style {:pointer-events "none"
+                              :clip-path (str "url(\u0023clip-" page-num "-" panel-id ")")
+                              }
                       :fill "none"
                       :stroke "#4a8ac7"
-                      :transform (str "translate(" (join " " [(* cw bb1x) (* ch bb1y)]) ")")
                       :stroke-width 2
                       :points (join " " (flatten (get-in strokes [s :verts])))}])
         ]
