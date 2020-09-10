@@ -5,7 +5,7 @@
             [clojure.string :refer [join]]
             [tools.devtools :refer [log]]
             [tools.helpers :refer [for-indexed]]
-            [oops.core :refer [oget ocall]]))
+            [oops.core :refer [oget oset! ocall]]))
 
 (defn random-color [] (str "rgb(" 
                            (->> (repeatedly 3 #(Math.floor (+ 10 (* 80 (Math.random)))))
@@ -90,6 +90,14 @@
                    (update :to (comp mod4 inc))
                    (update :n inc)))))))
 
+; TODO: all of the following angle/winding-number stuff can be done with javascript + offline canvas.
+;let offscreen = new OffscreenCanvas(256, 256);
+;let ctx = offscreen.getContext('2d');
+;let p = new Path2D;
+
+;p.rect(10, 20, 150, 100);
+;isinpath = ctx.isPointInPath(p, 140, 30)
+
 (defn angle [cell [v1 v2]]
   (let [[x y] cell
         {v1x :x v1y :y} v1
@@ -158,40 +166,27 @@
                                     (map first))) ] ; remove all cells that belong to panel 'i'
         (merge c1 (zipmap cells (repeat panel-id))))))
 
-(defn panel 
-  [state page-num panel-id]
-  (fn [state page-num panel-id] 
-    (let [prefs                    (get @state :preferences)
-          [cell-width cell-height] (prefs :cell-dimensions)
-          page                     (r/cursor state [:pages page-num])
-          panel                    (r/cursor page [:panels panel-id])
-          cells                    (@panel :cells) ;; will be rebound after 'walk-the-line'
-          offset                   (/ (prefs :gutter-width) 2)
-          rc                       (colors panel-id)
-          [x y :as cell]           (upper-left-corner cells)
-          acc                      {:cell cell 
-                                    :visited-cells #{}
-                                    :to 2 
-                                    :from nil
-                                    :verts []}
-          {:keys [verts visited-cells]}   (walk-the-line prefs cells acc)
-          cells                    (if (empty? verts) []
-                                      (cleanup panel visited-cells verts))]
+(defn walk! [state page-num panel-id]
+  (let [prefs                    (get @state :preferences)
+        [cell-width cell-height] (prefs :cell-dimensions)
+        page                     (r/cursor state [:pages page-num])
+        panel                    (r/cursor page [:panels panel-id])
+        cells                    (@panel :cells) ;; will be rebound after 'walk-the-line'
+        offset                   (/ (prefs :gutter-width) 2)
+        rc                       (colors panel-id)
+        [x y :as cell]           (upper-left-corner cells)
+        acc                      {:cell cell 
+                                  :visited-cells #{}
+                                  :to 2 
+                                  :from nil
+                                  :verts []}
+        {:keys [verts visited-cells]}   (walk-the-line prefs cells acc)
+        cells                    (if (empty? verts) []
+                                   (cleanup panel visited-cells verts))]
 
       (when-not (= (@panel :verts) verts) ; avoid unnecessary updates
         (swap! panel assoc :cells cells 
                            :verts verts
                            :bounding-box (bounding-box verts))
-        (swap! page update :cells (remove-disconnected cells panel-id)))
-     
-      [:g
-       [:polygon {:key "poly"
-                  :points (join " " (for [{:keys [x y] [nx ny] :normal} verts] 
-                                      (str (- (* cell-width x) (* offset nx)) "," 
-                                           (- (* cell-height y) (* offset ny)))))
-                  :stroke "black"
-                  :stroke-width 2
-                  :fill "white"}]
-       [drawing-area state page-num panel-id]
-       ])))
+        (swap! page update :cells (remove-disconnected cells panel-id)))))
 

@@ -65,7 +65,7 @@
                    :on-wheel (partial mouse-wheel appstate)}
          [overview state]
          [:div.spreads {:style {:position "relative"
-                                :transition "top 0.5s"
+                                ; :transition "top 0.5s"
                                 :top offset-y}}
 
           (for [[l r] (partition 2 2 [0] (range (count pages)))] ; 0 for padding. Page 0 is always blank. Could be first or last.

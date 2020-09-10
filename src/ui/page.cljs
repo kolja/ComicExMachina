@@ -2,59 +2,66 @@
   (:require [reagent.core :as r]
             [reagent.dom :as rd]
             [clojure.string :refer [join]]
-            [ui.panel :refer [panel]]
+            [ui.panel]
             [tools.devtools :refer [log]]
             [tools.helpers :refer [for-indexed]]
-            [oops.core :refer [oget ocall]]))
+            [oops.core :refer [oget oset! ocall]]))
 
 (defn offset [e]
   (let [bound (ocall e "currentTarget.getBoundingClientRect")]
     [(- (oget e :pageX) (oget bound :left))
      (- (oget e :pageY) (oget bound :top))]))
 
-(defn new-panel-with-cell [appstate page panels cells cell]
-  (let [active-panel  (get @appstate :active-panel)
-        panel (or active-panel (count panels))]
-    (swap! appstate assoc :active-panel panel)
-    (swap! page update-in [:panels panel :cells] conj cell)
-    (swap! page update-in [:cells] assoc cell panel)))
+(defn add-cell [state page-num panel-id cell]
+  (let [page (r/cursor state [:pages page-num])]
+    (swap! page update-in [:panels panel-id :cells] conj cell)
+    (swap! page update-in [:cells] assoc cell panel-id)
+    (ui.panel/walk! state page-num panel-id)))
 
-(defn migrate-cell [appstate page panels cells cell]
-  (let [active-panel (get @appstate :active-panel)]
+(defn migrate-cell [state page-num panel-id cell]
+  (let [page (r/cursor state [:pages page-num])
+        cells (get @page :cells)]
     (swap! page update-in [:panels (cells cell) :cells] (partial remove #{cell}))
-    (swap! page update-in [:panels active-panel :cells] conj cell)
-    (swap! page update-in [:cells] assoc cell active-panel)))
+    (swap! page update-in [:panels panel-id :cells] conj cell)
+    (swap! page update-in [:cells] assoc cell panel-id)
+    (ui.panel/walk! state page-num (cells cell))
+    (ui.panel/walk! state page-num panel-id)))
 
-(defn mouse-down [preferences appstate page e]
-  (when (= (@appstate :tool) :panels)
+(defn mouse-down [tool state page-num e]
+  (when (= tool :panels)
     (let [
-          scale   (get @appstate :scale)
-          [x y] (map #(/ % scale) (offset e))
-          prefs @preferences
-          panels (@page :panels)
-          cells (@page :cells)
+          appstate  (r/cursor state [:appstate])
+          page      (r/cursor state [:pages page-num])
+          prefs     (get @state :preferences)
+          scale     (get @appstate :scale)
+          [x y]     (map #(/ % scale) (offset e))
+          panels    (@page :panels)
+          cells     (@page :cells)
           [cellx celly] (prefs :cell-dimensions)
-          cell [(quot x cellx) (quot y celly)]]
-      (if (cells cell) 
-        (log (swap! appstate assoc :active-panel (cells cell)))
-        (new-panel-with-cell appstate page panels cells cell)))))
+          cell      [(quot x cellx) (quot y celly)]
+          new-panel? (not (boolean (cells cell))) ;; the cell that was clicked on doesn't belong to an existing panel TODO: threading
+          panel-id  (or (cells cell) (count panels))]
+      (swap! appstate assoc :active-panel panel-id)
+      (when new-panel? (add-cell state page-num panel-id cell))
+      )))
 
-(defn mouse-move [preferences appstate page e]
-  (when (= (@appstate :tool) :panels)
+(defn mouse-move [tool state page-num e]
+  (when (and (= tool :panels) (get-in @state [:appstate :active-panel]))
     (let [
-          scale   (get @appstate :scale)
-          [x y] (map #(/ % scale) (offset e))
-          prefs         @preferences
-          active-panel  (get @appstate :active-panel)
+          appstate      (r/cursor state [:appstate])
+          page          (r/cursor state [:pages page-num])
+          scale         (get @appstate :scale)
+          [x y]         (map #(/ % scale) (offset e))
+          panel-id     (get @appstate :active-panel)
           panels        (@page :panels)
           cells         (@page :cells)
-          [cellx celly] (prefs :cell-dimensions)
-          cell [(quot x cellx) (quot y celly)]]
-      (when active-panel 
-        (if (cells cell) ;; cell exists
-          (when-not (= (cells cell) active-panel)
-            (migrate-cell appstate page panels cells cell))
-          (new-panel-with-cell appstate page panels cells cell)))))) ;; new *panel* on mousemove? fix!
+          [cellx celly] (get-in @state [:preferences :cell-dimensions])
+          cell          [(quot x cellx) (quot y celly)]]
+
+      (if (cells cell) ;; cell belongs to existsting panel
+        (when-not (= (cells cell) panel-id)
+          (migrate-cell state page-num panel-id cell))
+        (add-cell state page-num panel-id cell)))))
 
 (defn mouse-up [appstate e]
   (swap! appstate assoc :active? false 
@@ -79,52 +86,82 @@
                      :stroke-width 6
                      }]])])))
 
-(defn grid [state page-num]
-  (fn [state page-num]
-    (let [{:keys [preferences appstate]} @state
-          {:keys [grid-width grid-height] [cw ch] :cell-dimensions m :margin} 
-                                        preferences
-          grid-gray                     "#ddd"
-          is-left?                      (zero? (mod page-num 2))
+(defn draw-grid [ctx state page-num]
+    (let [{:keys [preferences appstate]}  @state
 
-          [m0 m1 m2 m3]                 (if is-left? [(m 0) (m 1) (m 2) (m 3)]
-                                                     [(m 0) (m 3) (m 2) (m 1)])]
+          {:keys [grid-width grid-height] [cw ch] :cell-dimensions m :margin} 
+                                          preferences
+
+          s                               (get-in @state [:appstate :scale])
+          grid-gray                       "#ddd"
+          is-left?                        (zero? (mod page-num 2))
+
+          [m0 m1 m2 m3]                   (if is-left? 
+                                            [(m 0) (m 1) (m 2) (m 3)]
+                                            [(m 0) (m 3) (m 2) (m 1)])]
       
-      [:g {:fill grid-gray}
-        [:rect {
-                :x (* cw m3) :y (* ch m0) :width (* cw (- grid-width m1 m3)) :height (* ch (- grid-height m1 m3))
-                }]
-        (when (not is-left?) 
-          [:line 
-           {:stroke-width 2
-            :stroke "#ccc"
-            :stroke-dasharray "7,7" :x1 1 :y1 1 :x2 1 :y2 (* ch grid-height)}])]
-      )))
+      (oset! ctx :fillStyle "white")
+      (ocall ctx :fillRect 0 0 (* cw grid-width s) (* ch grid-height s))
+      (oset! ctx :fillStyle grid-gray)
+      (ocall ctx :fillRect (* cw m3 s) (* ch m0 s) (* cw (- grid-width m1 m3) s) (* ch (- grid-height m1 m3) s))
+      ))
+
+
+(defn svg-path [verts cw ch offset scale]
+    (str "M " (join "L " (for [{:keys [x y] [nx ny] :normal} verts] 
+                             (str (- (* cw x scale) (* offset nx scale)) " " 
+                                  (- (* ch y scale) (* offset ny scale))))) " Z"))
 
 (defn page [state page-num]
-  (fn [state page-num]
-    (let [scale                  (get-in @state [:appstate :scale])
-          {:keys [width height]} (get @state :preferences)
-          page                   (r/cursor state [:pages page-num])
-          preferences            (r/cursor state [:preferences])
-          appstate               (r/cursor state [:appstate])
-          panels                 (r/cursor page [:panels])
-          ]
-       [:svg {
-              :key (random-uuid)
-              :width (* scale width)
-              :height (* scale height) 
-              :view-box [0 0 width height]
-              :xmlns "http://www.w3.org/2000/svg"
-              :on-mouse-down (partial mouse-down preferences appstate page)
-              :on-mouse-move (partial mouse-move preferences appstate page)
-              :on-mouse-up (partial mouse-up appstate)
-              }
-        [clip-paths @preferences page-num panels]
-        [grid state page-num]
-        (for [panel-id (range (count @panels))]
-          ^{:key (str "panel-" panel-id)} [panel state page-num panel-id]
-          )])))
+  (let [dom-node               (r/atom nil)
+        scale                  (get-in @state [:appstate :scale])
+        {:keys [width height]} (get @state :preferences)
+        page                   (r/cursor state [:pages page-num])
+        preferences            (r/cursor state [:preferences])
+        appstate               (r/cursor state [:appstate])
+        panels                 (r/cursor page [:panels])
+        ]
+    (r/create-class
+      {:component-did-update
+       (fn [this] 
+         (let [canvas  (oget @dom-node :firstChild)
+               ctx     (ocall canvas :getContext "2d")
+               scale   (get-in @state [:appstate :scale])
+               panels  @panels
+               prefs   @preferences
+               [cw ch] (prefs :cell-dimensions)
+               offset  (/ (prefs :gutter-width) 2)]
+
+           (draw-grid ctx state page-num)
+           (oset! ctx :lineWidth 3)
+           (oset! ctx :fillStyle "white")
+           (doseq [panel-id (range (count panels))]
+             (let [verts (get-in panels [panel-id :verts])
+                   path  (js/Path2D. (svg-path verts cw ch offset scale))]
+               (ocall ctx :fill path)
+               (ocall ctx :stroke path)
+               ))))
+
+       :component-did-mount
+       (fn [this] (reset! dom-node (rd/dom-node this)))
+
+       :reagent-render
+       (fn []
+         (let [scale (get-in @state [:appstate :scale])
+               tool (get-in @state [:appstate :tool])]
+           [:div.with-canvas 
+            {:on-mouse-down (partial mouse-down tool state page-num)
+             :on-mouse-move (partial mouse-move tool state page-num)
+             :on-mouse-up (partial mouse-up appstate)
+             :style {:background-color "white"
+                     :width (* scale width)
+                     :height (* scale height)}}
+
+            [:canvas 
+             {:width (* scale width)
+              :height (* scale height)}]]))
+       }
+      )))
 
 (defn blank [state]
   (fn [state]
