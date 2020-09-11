@@ -112,25 +112,19 @@
                              (str (- (* cw x scale) (* offset nx scale)) " " 
                                   (- (* ch y scale) (* offset ny scale))))) " Z"))
 
-(defn page [state page-num]
-  (let [dom-node               (r/atom nil)
-        scale                  (get-in @state [:appstate :scale])
-        {:keys [width height]} (get @state :preferences)
-        page                   (r/cursor state [:pages page-num])
+(defn draw [dom-node state page-num]
+
+  (let [page                   (r/cursor state [:pages page-num])
         preferences            (r/cursor state [:preferences])
         appstate               (r/cursor state [:appstate])
         panels                 (r/cursor page [:panels])
-        ]
-    (r/create-class
-      {:component-did-update
-       (fn [this] 
-         (let [canvas  (oget @dom-node :firstChild)
-               ctx     (ocall canvas :getContext "2d")
-               scale   (get-in @state [:appstate :scale])
-               panels  @panels
-               prefs   @preferences
-               [cw ch] (prefs :cell-dimensions)
-               offset  (/ (prefs :gutter-width) 2)]
+        canvas  (oget @dom-node :firstChild)
+        ctx     (ocall canvas :getContext "2d")
+        scale   (get-in @state [:appstate :scale])
+        panels  @panels
+        prefs   @preferences
+        [cw ch] (prefs :cell-dimensions)
+        offset  (/ (prefs :gutter-width) 2)]
 
            (draw-grid ctx state page-num)
            (oset! ctx :lineWidth 3)
@@ -142,13 +136,27 @@
                (ocall ctx :stroke path)
                ))))
 
+(defn page [state page-num]
+
+  (let [dom-node (r/atom nil)]
+
+    (r/create-class
+      {:component-did-update
+       (fn [this] (draw dom-node state page-num))
+
        :component-did-mount
-       (fn [this] (reset! dom-node (rd/dom-node this)))
+       (fn [this] 
+         (reset! dom-node (rd/dom-node this))
+         (draw dom-node state page-num))
 
        :reagent-render
        (fn []
-         (let [scale (get-in @state [:appstate :scale])
-               tool (get-in @state [:appstate :tool])]
+
+         (let [appstate               (r/cursor state [:appstate])
+               {:keys [width height]} (get @state :preferences)
+               {:keys [scale tool]}   @appstate]
+           (when @dom-node
+             (draw dom-node state page-num))
            [:div.with-canvas 
             {:on-mouse-down (partial mouse-down tool state page-num)
              :on-mouse-move (partial mouse-move tool state page-num)
