@@ -20,27 +20,28 @@
     [(-> pageX (- left) (* s) (+ x))
      (-> pageY (- top ) (* s) (+ y))]))
 
-(defn mouse-down [appstate panel e]
-  (when (= (@appstate :tool) :drawing)
+(defn mouse-down [state page-num e]
+  (let [appstate (r/cursor state [:appstate])]
     (do
       (swap! appstate assoc :active? true)
       (if (empty? (@panel :strokes))
         (swap! panel assoc :strokes [{:verts [(offset (get @appstate :scale) e)]}])
         (swap! panel update-in [:strokes] conj {:verts [(offset (get @appstate :scale) e)]})))))
 
-(defn mouse-move [appstate panel e]
-  (when (@appstate :active?)
-    (let [last-stroke (last (@panel :strokes))
-          new-stroke  (update-in last-stroke [:verts] conj (offset (get @appstate :scale) e))]
-      (swap! panel update-in [:strokes] 
-             (fn [s] (conj (vec (butlast s)) 
-                           new-stroke))
-             )) 
-    )
+(defn mouse-move [state page-num e]
+  (let [appstate (r/cursor state [:appstate])]
+    (when (@appstate :active?)
+      (let [last-stroke (last (@panel :strokes))
+            new-stroke  (update-in last-stroke [:verts] conj (offset (get @appstate :scale) e))]
+        (swap! panel update-in [:strokes] 
+               (fn [s] (conj (vec (butlast s)) 
+                             new-stroke))
+               )) 
+      ))
   )
 
-(defn mouse-up [appstate panel]
-  (when (= (@appstate :tool) :drawing)
+(defn mouse-up [state page-num e]
+  (let [appstate (r/cursor state [:appstate])]
     (swap! appstate assoc :active? false))
   )
 

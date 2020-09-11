@@ -4,16 +4,9 @@
             [ui.drawing-area :refer [drawing-area]]
             [clojure.string :refer [join]]
             [tools.devtools :refer [log]]
+            [ui.tools :refer [inside?]]
             [tools.helpers :refer [for-indexed]]
             [oops.core :refer [oget oset! ocall]]))
-
-(defn random-color [] (str "rgb(" 
-                           (->> (repeatedly 3 #(Math.floor (+ 10 (* 80 (Math.random)))))
-                                (map #(str % "%"))
-                                (join ",")) 
-                           ")"))
-
-(def colors (into [] (repeatedly 100 random-color)))
 
 (defn cell-neighbours [{:keys [grid-width grid-height]} [x y]] 
   (map (fn [[x y]] 
@@ -90,39 +83,6 @@
                    (update :to (comp mod4 inc))
                    (update :n inc)))))))
 
-; TODO: all of the following angle/winding-number stuff can be done with javascript + offline canvas.
-;let offscreen = new OffscreenCanvas(256, 256);
-;let ctx = offscreen.getContext('2d');
-;let p = new Path2D;
-
-;p.rect(10, 20, 150, 100);
-;isinpath = ctx.isPointInPath(p, 140, 30)
-
-(defn angle [cell [v1 v2]]
-  (let [[x y] cell
-        {v1x :x v1y :y} v1
-        {v2x :x v2y :y} v2
-        ax (- v1x x)
-        ay (- v1y y)
-        bx (- v2x x)
-        by (- v2y y)
-        direction (if (pos? (- (* by ax) (* ay bx))) 1 -1)]
-    (* direction (.acos js/Math
-                        (/ (+ (* ax bx) 
-                              (* ay by)) 
-                           (.sqrt js/Math 
-                                  (* (+ (* ax ax) (* ay ay)) 
-                                     (+ (* bx bx) (* by by)))))))))
-
-(defn winding-number 
-  "calculates the winding number and returns if it's (roughly) smaller than tau (aka 2 x PI)"
-  [cell verts]
-  (->> (partition 2 1 (conj verts (first verts)))
-       (map (fn [vs] (angle cell vs)))
-       (apply +)))
-
-(defn inside? [cell verts]
-  (< 3 (winding-number cell verts)))
 
 (defn bounding-box 
   "returns a bounding box [upper-left lower-right] that encompasses all cells"
@@ -144,7 +104,7 @@
     [x y]))
 
 (defn cleanup 
-  "reset this panels boundry box
+  "reset this panel's boundry box
   list of all cells in this boundry box, minus cells visited by 'walk-the-line' 
   for each remaining cell: 
     sum of angles between it and all the verts (aka: calculate winding-number)
@@ -173,7 +133,6 @@
         panel                    (r/cursor page [:panels panel-id])
         cells                    (@panel :cells) ;; will be rebound after 'walk-the-line'
         offset                   (/ (prefs :gutter-width) 2)
-        rc                       (colors panel-id)
         [x y :as cell]           (upper-left-corner cells)
         acc                      {:cell cell 
                                   :visited-cells #{}
