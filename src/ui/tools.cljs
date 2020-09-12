@@ -9,10 +9,10 @@
   (and (<= bx1 x bx2) 
        (<= by1 y by2)))
 
-(defn offset [e]
+(defn offset [scale e]
   (let [bound (ocall e "currentTarget.getBoundingClientRect")]
-    [(- (oget e :pageX) (oget bound :left))
-     (- (oget e :pageY) (oget bound :top))]))
+    [(/ (- (oget e :pageX) (oget bound :left)) scale)
+     (/ (- (oget e :pageY) (oget bound :top)) scale)]))
 
 (defn clicked-cell 
   "over which cell did this event occur?"
@@ -20,7 +20,7 @@
   (let [state         @state
         [cellx celly] (get-in state [:preferences :cell-dimensions])
         scale         (get-in state [:appstate :scale])
-        [x y]         (map #(/ % scale) (offset e))]
+        [x y]         (offset scale e)]
 
     [(quot x cellx) (quot y celly)]))
 

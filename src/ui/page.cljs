@@ -25,6 +25,19 @@
       (ocall ctx :fillRect (* cw m3 s) (* ch m0 s) (* cw (- grid-width m1 m3) s) (* ch (- grid-height m1 m3) s))
       ))
 
+(defn strokes [state page-num]
+  (let [panels (get-in @state [:pages page-num :panels])
+        scale (get-in @state [:appstate :scale])
+        path (js/Path2D.)]
+
+    (doseq [{:keys [strokes]} panels]
+      (doseq [{:keys [verts]} strokes]
+        (ocall path :addPath
+               (js/Path2D. (str "M" (join "L" (for [[x y] verts] (str (* scale x) " " (* scale y)))))))
+        ))
+    path
+    )  
+  )
 
 (defn svg-path [verts cw ch offset scale]
     (str "M " (join "L " (for [{:keys [x y] [nx ny] :normal} verts] 
@@ -45,15 +58,31 @@
         [cw ch] (prefs :cell-dimensions)
         offset  (/ (prefs :gutter-width) 2)]
 
-           (draw-grid ctx state page-num)
-           (oset! ctx :lineWidth (ocall js/Math :ceil (* 2 scale)))
-           (oset! ctx :fillStyle "white")
-           (doseq [panel-id (range (count panels))]
-             (let [verts (get-in panels [panel-id :verts])
-                   path  (js/Path2D. (svg-path verts cw ch offset scale))]
-               (ocall ctx :fill path)
-               (ocall ctx :stroke path)
-               ))))
+           (let [path (js/Path2D. (join " " (map #(svg-path (% :verts) cw ch offset scale) panels)))]
+
+             (draw-grid ctx state page-num)
+
+             (oset! ctx :lineWidth (ocall js/Math :ceil (* 2 scale)))
+             (oset! ctx :fillStyle "white")
+
+             (ocall ctx :fill path)
+
+             (ocall ctx :save)
+
+             (oset! ctx :lineWidth 2)
+             (oset! ctx :strokeStyle "#4a8ac7")
+             ; (ocall js/Math :ceil (* 2 scale))
+
+             (ocall ctx :clip path)
+
+             (ocall ctx :stroke (strokes state page-num))
+
+             (ocall ctx :restore)
+
+             (ocall ctx :stroke path)
+
+             )
+           ))
 
 (defn page [state page-num]
 
@@ -74,8 +103,8 @@
          (let [appstate               (r/cursor state [:appstate])
                {:keys [width height]} (get @state :preferences)
                {:keys [scale tool]}   @appstate
-               handler                {:panels {:down pd/mouse-down :move pd/mouse-move :up pd/mouse-up}
-                                       :draw   {:down dr/mouse-down :move dr/mouse-move :up dr/mouse-up}}
+               handler                {:panels  {:down pd/mouse-down :move pd/mouse-move :up pd/mouse-up}
+                                       :drawing {:down dr/mouse-down :move dr/mouse-move :up dr/mouse-up}}
                ]
            (when @dom-node
              (draw dom-node state page-num))
@@ -101,7 +130,6 @@
            :style {:width (* scale width)
                    :height (* scale height)
                    :background-color "#333"} }])))
-
 
 (defn spread-page [state l r]
   (fn [state l r]

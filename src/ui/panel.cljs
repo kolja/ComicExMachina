@@ -1,7 +1,6 @@
 (ns ui.panel
   (:require [reagent.core :as r]
             [reagent.dom :as rd]
-            [ui.drawing-area :refer [drawing-area]]
             [clojure.string :refer [join]]
             [tools.devtools :refer [log]]
             [ui.tools :refer [inside?]]
@@ -91,12 +90,6 @@
         ys (sort-by :y verts)]
     [[(get (first xs) :x) (get (first ys) :y)]
      [(get (last  xs) :x) (get (last  ys) :y)]]))
-
-(defn in-bounding-box? 
-  "is the cell within the bounding box?"
-  [[[bx1 by1] [bx2 by2]] [x y]]  
-  (and (<= bx1 x bx2) 
-       (<= by1 y by2)))
 
 (defn cells-in-bb [[[x1 y1] [x2 y2]]]
   (for [x (range x1 x2) 
