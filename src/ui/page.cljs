@@ -25,64 +25,70 @@
       (ocall ctx :fillRect (* cw m3 s) (* ch m0 s) (* cw (- grid-width m1 m3) s) (* ch (- grid-height m1 m3) s))
       ))
 
-(defn strokes [state page-num]
-  (let [panels (get-in @state [:pages page-num :panels])
-        scale (get-in @state [:appstate :scale])
-        path (js/Path2D.)]
+(defn strokes 
+  ;; TODO: state will be derefed many times this way; perhaps only alow one arity with panel-id as optional arg.
+  ([state page-num panel-id]
+   (let [path (js/Path2D.)
+         strokes (get-in @state [:pages page-num :panels panel-id :strokes])
+         scale (get-in @state [:appstate :scale])]
 
-    (doseq [{:keys [strokes]} panels]
-      (doseq [{:keys [verts]} strokes]
-        (ocall path :addPath
-               (js/Path2D. (str "M" (join "L" (for [[x y] verts] (str (* scale x) " " (* scale y)))))))
-        ))
-    path
-    )  
-  )
+     (doseq [{:keys [verts]} strokes]
+       (ocall path :addPath
+              (js/Path2D. (str "M" (join "L" (for [[x y] verts] (str (* scale x) " " (* scale y))))))))
+     path)
+   )
+  ([state page-num]
+   (let [panels (get-in @state [:pages page-num :panels])
+                  path (js/Path2D.)]
+
+     (doseq [p-id (range (count panels))]
+       (ocall path :addPath (strokes state page-num p-id)))
+     path
+     )))
 
 (defn svg-path [verts cw ch offset scale]
+  (if (empty? verts) ""
     (str "M " (join "L " (for [{:keys [x y] [nx ny] :normal} verts] 
-                             (str (- (* cw x scale) (* offset nx scale)) " " 
-                                  (- (* ch y scale) (* offset ny scale))))) " Z"))
+                           (str (- (* cw x scale) (* offset nx scale)) " " 
+                                (- (* ch y scale) (* offset ny scale))))) " Z")))
 
 (defn draw [dom-node state page-num]
 
-  (let [page                   (r/cursor state [:pages page-num])
-        preferences            (r/cursor state [:preferences])
-        appstate               (r/cursor state [:appstate])
-        panels                 (r/cursor page [:panels])
-        canvas  (oget @dom-node :firstChild)
-        ctx     (ocall canvas :getContext "2d")
-        scale   (get-in @state [:appstate :scale])
-        panels  @panels
-        prefs   @preferences
-        [cw ch] (prefs :cell-dimensions)
-        offset  (/ (prefs :gutter-width) 2)]
+  (let [s            @state
+        canvas       (oget @dom-node :firstChild)
+        ctx          (ocall canvas :getContext "2d")
+        scale        (get-in s [:appstate :scale])
+        panels       (get-in s [:pages page-num :panels])
+        prefs        (get-in s [:preferences])
+        [cw ch]      (prefs :cell-dimensions)
+        offset       (/ (prefs :gutter-width) 2)
+        all-paths    (mapv #(svg-path (% :verts) cw ch offset scale) panels)]
 
-           (let [path (js/Path2D. (join " " (map #(svg-path (% :verts) cw ch offset scale) panels)))]
+    (draw-grid ctx state page-num)
 
-             (draw-grid ctx state page-num)
+    (oset! ctx :lineWidth (ocall js/Math :ceil (* 2 scale)))
+    (oset! ctx :fillStyle "white")
 
-             (oset! ctx :lineWidth (ocall js/Math :ceil (* 2 scale)))
-             (oset! ctx :fillStyle "white")
+    (ocall ctx :fill (js/Path2D. (join " " all-paths)))
 
-             (ocall ctx :fill path)
+    (ocall ctx :save)
 
-             (ocall ctx :save)
+    (oset! ctx :lineWidth (ocall js/Math :ceil scale))
+    (oset! ctx :strokeStyle "#4a8ac7")
 
-             (oset! ctx :lineWidth 2)
-             (oset! ctx :strokeStyle "#4a8ac7")
-             ; (ocall js/Math :ceil (* 2 scale))
+    (doseq [panel-id (range (count all-paths))] ;; TODO: this is the panel-id only by coincidence. Make sure panels are stored as map
+      (let [panel (get all-paths panel-id)]
+      
+        (ocall ctx :save)
+        (ocall ctx :clip (js/Path2D. panel))
+        (ocall ctx :stroke (strokes state page-num panel-id))
+        (ocall ctx :restore)
+      ))
 
-             (ocall ctx :clip path)
+    (ocall ctx :restore)
 
-             (ocall ctx :stroke (strokes state page-num))
-
-             (ocall ctx :restore)
-
-             (ocall ctx :stroke path)
-
-             )
-           ))
+    (ocall ctx :stroke (js/Path2D. (join " " all-paths)))
+ ))
 
 (defn page [state page-num]
 
