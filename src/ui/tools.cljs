@@ -1,7 +1,12 @@
 
 (ns ui.tools
   (:require [oops.core :refer [oget ocall]]
+            [goog.string :as gstring]
+            [goog.string.format]
             [tools.devtools :refer [log]]))
+
+(defn lpad [d s n]
+  (gstring/format (str "%" s n "d") d))
 
 (defn in-bounding-box? 
   "is the cell within the bounding box?"

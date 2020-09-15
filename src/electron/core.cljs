@@ -4,11 +4,15 @@
 
 (def electron       (js/require "electron"))
 (def app            (.-app electron))
+(def ipc-main       (oget electron :ipcMain))
 (def session        (.-session electron))
 (def browser-window (.-BrowserWindow electron))
 
 (def mac? (= js/process.platform "darwin"))
 (def main-window (atom nil))
+
+(ocall ipc-main :handle "server-hello" (fn [e & args]
+  (ocall js/console :log (str args ": Server Hello!"))))
 
 (defn init-browser []
   (reset! main-window (browser-window.

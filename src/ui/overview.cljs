@@ -8,21 +8,24 @@
 (defn overview [state]
 
   (let [pages         (r/cursor state [:pages])
-        current-page  (r/cursor state [:appstate :current-page])]
+        current-page  (r/cursor state [:appstate :current-page])
+        pgs           @pages
+        next-index    (inc (apply max (keys pgs)))
+        next-page-num (inc (count pgs))]
 
-    (fn [state]
       [:div.overview
        [:ol
-        (doall (for [n (range (count @pages))]
-                 [:li {:key n
-                       :class [(when (= n @current-page) "current")]
-                       :on-click #(when-not (zero? n) (reset! current-page n))} 
-                  (if (zero? n) "" (str n))]
+               
+        (doall (for [[pg-id pg] (concat [[]] (sort-by #(get-in (val %) [:num]) pgs))]
+                 [:li {:key (or pg-id (random-uuid))
+                       :class [(when (= pg-id @current-page) "current")]
+                       :on-click #(when-not (nil? pg-id) (reset! current-page pg-id))} 
+                  (if (nil? pg-id) "" (str (get pg :num)))]
                  ))]
 
        [:button
-        {:on-click #(swap! pages conj {:panels [] :cells {}})}
+        {:on-click #(swap! pages assoc next-index {:num next-page-num :panels [] :cells {}})}
         (str "add page")]
-       ])))
+       ]))
 
 

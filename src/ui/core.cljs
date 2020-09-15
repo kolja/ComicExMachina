@@ -20,18 +20,19 @@
                           :active? false
                         }
                         :preferences {
-                                      :gutter-width 6
-                                      :grid-width 16
-                                      :grid-height 16
-                                      :margin [2 2 2 2] ; top center bottom outer
-                                      :width 210
-                                      :height 297
-                                      ; :cell-dimensions [:grid-width :grid-height] ; get calculated when app is mounted
-                                      }
-                        :pages [{}          ;; page "zero" stays blank
-                                {:panels [{ :cells [] }] 
-                                 :cells {}} ;; empty doc at least contains one page
-                                ]}))
+                          :export-path "/Users/kolja/Documents/comic/"
+                          :gutter-width 6
+                          :grid-width 16
+                          :grid-height 16
+                          :margin [2 2 2 2] ; top center bottom outer
+                          :width 210
+                          :height 297
+                          ; :cell-dimensions [:grid-width :grid-height] ; get calculated when app is mounted
+                          }
+                        :pages {0 {:num 1
+                                   :panels [{ :cells [] }] 
+                                   :cells {}} ;; empty doc at least contains one page}
+                                }}))
 
 (defn mouse-wheel [appstate e]
   (let [s             (oget e :deltaX)
@@ -54,6 +55,7 @@
 
     (fn [state]
       (let [appstate                    (r/cursor state [:appstate])
+            pages                       (get-in @state [:pages])
             scale                       (get @appstate :scale)
             {:keys [pages preferneces]} @state
             current-page                (@appstate :current-page)
@@ -67,8 +69,13 @@
          [:div.spreads {:style {:position "relative"
                                 ; :transition "top 0.5s"
                                 :top offset-y}}
-
-          (for [[l r] (partition 2 2 [0] (range (count pages)))] ; 0 for padding. Page 0 is always blank. Could be first or last.
+          
+          ;; sort pages by :num partition into spread-pages. Only only interested in their id's
+          (for [[[l _] [r _]] 
+                (->> pages
+                     (sort-by #(get-in (val %) [:num]))
+                     (concat [[]])
+                     (partition 2 2 [[]]))] 
             ^{:key (str "page-" l "-" r)} 
             [spread-page state l r])]
          [toolbar state]])
