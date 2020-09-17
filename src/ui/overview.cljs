@@ -24,7 +24,7 @@
                  ))]
 
        [:button
-        {:on-click #(swap! pages assoc next-index {:num next-page-num :panels [] :cells {}})}
+        {:on-click #(swap! pages assoc next-index {:num next-page-num :panels {} :cells {}})}
         (str "add page")]
        ]))
 

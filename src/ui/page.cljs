@@ -21,7 +21,7 @@
           s                               (appstate :scale)
           grid-gray                       "#ddd"
           is-left?                        (zero? (mod page-num 2))
-          [m0 m1 m2 m3]                   (if is-left? 
+          [m0 m1 m2 m3]                   (if is-left?
                                             [(m 0) (m 1) (m 2) (m 3)]
                                             [(m 0) (m 3) (m 2) (m 1)])]
       
@@ -77,7 +77,7 @@
         [cw ch]      (prefs :cell-dimensions)
         offset       (/ (prefs :gutter-width) 2)
         export-path  (get prefs :export-path)
-        all-paths    (mapv #(svg-path (% :verts) cw ch offset scale) panels)
+        all-paths    (into {} (map (fn [[k v]] [k (svg-path (get v :verts) cw ch offset scale)]) panels))
         ]
 
     ;(ocall ipc :invoke "server-hello", (str "page-" pg-id)) 
@@ -87,14 +87,14 @@
     (oset! ctx :lineWidth (ocall js/Math :ceil (* 2 scale)))
     (oset! ctx :fillStyle "white")
 
-    (ocall ctx :fill (js/Path2D. (join " " all-paths)))
+    (ocall ctx :fill (js/Path2D. (join " " (vals all-paths))))
 
     (ocall ctx :save)
 
     (oset! ctx :lineWidth (ocall js/Math :ceil scale))
     (oset! ctx :strokeStyle "#4a8ac7")
 
-    (doseq [panel-id (range (count all-paths))] ;; TODO: this is the panel-id only by coincidence. Make sure panels are stored as map
+    (doseq [panel-id (keys panels)]
       (let [panel (get all-paths panel-id)]
       
         (ocall ctx :save)
@@ -106,7 +106,7 @@
 
     (ocall ctx :restore)
 
-    (ocall ctx :stroke (js/Path2D. (join " " all-paths)))
+    (ocall ctx :stroke (js/Path2D. (join " " (vals all-paths))))
  ))
 
 (defn page [state pg-id]

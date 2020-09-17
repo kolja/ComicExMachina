@@ -30,7 +30,7 @@
                           ; :cell-dimensions [:grid-width :grid-height] ; get calculated when app is mounted
                           }
                         :pages {0 {:num 1
-                                   :panels [{ :cells [] }] 
+                                   :panels {} 
                                    :cells {}} ;; empty doc at least contains one page}
                                 }}))
 
