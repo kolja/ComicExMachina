@@ -5,7 +5,7 @@
             [goog.string.format]
             [tools.devtools :refer [log]]))
 
-(defn lpad [d s n]
+(defn lpad [s n d]
   (gstring/format (str "%" s n "d") d))
 
 (defn in-bounding-box? 

@@ -2,7 +2,7 @@
   (:require [reagent.core :as r]
             [reagent.dom :as rd]
             [clojure.string :refer [join]]
-            [ui.panel]
+            [ui.panel :refer [panel]]
             [ui.tools :refer [lpad]]
             [ui.handle-panel-drawing :as pd]
             [ui.drawing-area :as dr]
@@ -14,7 +14,8 @@
 (defonce ipc (-> (js/require "electron") 
                  (oget :ipcRenderer)))
 
-(defn draw-grid [ctx state pg-id]
+(defn grid [state pg-id]
+  (fn [state pg-id]
     (let [{:keys [preferences appstate pages]}  @state
           {:keys [grid-width grid-height] [cw ch] :cell-dimensions m :margin} preferences
           page-num                        (get-in pages [pg-id :num])
@@ -25,126 +26,88 @@
                                             [(m 0) (m 1) (m 2) (m 3)]
                                             [(m 0) (m 3) (m 2) (m 1)])]
       
-      (oset! ctx :fillStyle "white")
-      (ocall ctx :fillRect 0 0 (* cw grid-width s) (* ch grid-height s))
-      (oset! ctx :fillStyle grid-gray)
-      (ocall ctx :fillRect (* cw m3 s) (* ch m0 s) (* cw (- grid-width m1 m3) s) (* ch (- grid-height m1 m3) s))
-      ))
-
-(defn strokes 
-  ;; TODO: state will be derefed many times this way; perhaps only alow one arity with panel-id as optional arg.
-  ([state pg-id panel-id]
-   (let [path (js/Path2D.)
-         strokes (get-in @state [:pages pg-id :panels panel-id :strokes])
-         scale (get-in @state [:appstate :scale])]
-
-     (doseq [{:keys [verts]} strokes]
-       (ocall path :addPath
-              (js/Path2D. (str "M" (join "L" (for [[x y] verts] (str (* scale x) " " (* scale y))))))))
-     path)
-   )
-  ([state pg-id]
-   (let [panels (get-in @state [:pages pg-id :panels])
-                  path (js/Path2D.)]
-
-     (doseq [p-id (range (count panels))]
-       (ocall path :addPath (strokes state pg-id p-id)))
-     path
-     )))
+      [:g {:fill grid-gray}
+        [:rect {
+                :x (* cw m3) :y (* ch m0) :width (* cw (- grid-width m1 m3)) :height (* ch (- grid-height m1 m3))
+                }]
+        (when (not is-left?) 
+          [:line 
+           {:stroke-width 2
+            :stroke "#ccc"
+            :stroke-dasharray "7,7" :x1 1 :y1 1 :x2 1 :y2 (* ch grid-height)}])]
+      )))
 
 (defn svg-path [verts cw ch offset scale]
   (if (empty? verts) ""
     (str "M " (join "L " (for [{:keys [x y] [nx ny] :normal} verts] 
-                           (str (- (* cw x scale) (* offset nx scale)) " " 
-                                (- (* ch y scale) (* offset ny scale))))) " Z")))
+                           (str (- (* cw x) (* offset nx)) " " 
+                                (- (* ch y) (* offset ny))))) " Z")))
 
-(defn draw-image [ctx path pg-id panel-id]
-  (let [image (js/Image.)
-        pgn   (lpad pg-id "0" 2)
-        pid   (lpad panel-id "0" 2)]
-    (oset! image :src (str "file://" path "page" pgn "/panel" pid ".png"))
-    (oset! image :onerror (fn [e] (ocall js/console :log (str "couldn't load page" pgn "/panel" pid " :" (clj->js e)))))
-    (oset! image :onload (fn [] (ocall ctx :drawImage image 0 0 )))))
+(defn clip-paths [pg-id panels cw ch paths]
+  [:defs
+   (for [[pn-id path] paths :let [[[x y] [_ _]] (get-in panels [pn-id :bounding-box])
+                                   p2 (partial lpad "0" 2)]]
+     [:g {:key (str "clip-" pg-id "-" pn-id)}
+      [:clipPath {;; clippath has to counteract the transform of it's content :-(
+                  :transform  (str "translate(" (* -1 cw x) "," (* -1 ch y) ")")
+                  :id (str "clipimg-" (p2 pg-id) "-" (p2 pn-id))}
+       [:path {:d path}]]
 
-(defn draw [dom-node state pg-id]
+      [:clipPath {:id (str "clipsvg-" (p2 pg-id) "-" (p2 pn-id))}
+       [:path {:d path}]]]
+     )])
 
-  (let [s            @state
-        canvas       (oget @dom-node :firstChild)
-        ctx          (ocall canvas :getContext "2d")
-        scale        (get-in s [:appstate :scale])
-        panels       (get-in s [:pages pg-id :panels])
-        prefs        (get-in s [:preferences])
-        [cw ch]      (prefs :cell-dimensions)
-        offset       (/ (prefs :gutter-width) 2)
-        export-path  (get prefs :export-path)
-        all-paths    (into {} (map (fn [[k v]] [k (svg-path (get v :verts) cw ch offset scale)]) panels))
-        ]
-
-    ;(ocall ipc :invoke "server-hello", (str "page-" pg-id)) 
-
-    (draw-grid ctx state pg-id)
-
-    (oset! ctx :lineWidth (ocall js/Math :ceil (* 2 scale)))
-    (oset! ctx :fillStyle "white")
-
-    (ocall ctx :fill (js/Path2D. (join " " (vals all-paths))))
-
-    (ocall ctx :save)
-
-    (oset! ctx :lineWidth (ocall js/Math :ceil scale))
-    (oset! ctx :strokeStyle "#4a8ac7")
-
-    (doseq [panel-id (keys panels)]
-      (let [panel (get all-paths panel-id)]
-      
-        (ocall ctx :save)
-        (ocall ctx :clip (js/Path2D. panel))
-        (ocall ctx :stroke (strokes state pg-id panel-id))
-        (ocall ctx :restore)
-
-      ))
-
-    (ocall ctx :restore)
-
-    (ocall ctx :stroke (js/Path2D. (join " " (vals all-paths))))
- ))
+(defn panel-outline [paths pn-id]
+  [:path {:key (str "outline" pn-id)
+          :d (paths pn-id) 
+          :stroke "black"
+          :stroke-width 2
+          :fill "none"}])
 
 (defn page [state pg-id]
+  (fn [state pg-id]
+    (let [
+          appstate               (r/cursor state [:appstate])
+          prefs                  (get @state :preferences)
+          export-path            (get prefs :export-path)
+          panels                 (get-in @state [:pages pg-id :panels])
+          {:keys [width height gutter-width] [cw ch] :cell-dimensions} prefs
+          offset                 (/ gutter-width 2)
+          {:keys [scale tool]}   @appstate
+          lpad2                  (partial lpad "0" 2)
 
-  (let [dom-node (r/atom nil)]
+          all-paths              (into {} (map (fn [[k v]] [k (svg-path (get v :verts) cw ch offset scale)]) panels))
+          handler                {:panels  {:down pd/mouse-down :move pd/mouse-move :up pd/mouse-up}
+                                  :drawing {:down dr/mouse-down :move dr/mouse-move :up dr/mouse-up}}]
+      [:div.page
+       
+       [:svg {
+              :key (random-uuid)
+              :width (* scale width)
+              :height (* scale height) 
+              :view-box [0 0 width height]
+              :xmlns "http://www.w3.org/2000/svg"
+              :on-mouse-down (partial (get-in handler [tool :down]) state pg-id)
+              :on-mouse-move (partial (get-in handler [tool :move]) state pg-id)
+              :on-mouse-up   (partial (get-in handler [tool :up  ]) state pg-id)
+              :style {:background-color "#eee"}
+              }
 
-    (r/create-class
-      {:component-did-update
-       (fn [this] (draw dom-node state pg-id))
 
-       :component-did-mount
-       (fn [this] 
-         (reset! dom-node (rd/dom-node this))
-         (draw dom-node state pg-id))
+        [clip-paths pg-id panels cw ch all-paths]
+        [grid state pg-id]
+        
+        (for [pn-id (keys panels)]
+          [:g {:key (str "panel" pn-id)}
+            [panel state pg-id pn-id]
+            [panel-outline all-paths pn-id]
+            ]
+          )]
+        
 
-       :reagent-render
-       (fn []
-
-         (let [appstate               (r/cursor state [:appstate])
-               {:keys [width height]} (get @state :preferences)
-               {:keys [scale tool]}   @appstate
-               handler                {:panels  {:down pd/mouse-down :move pd/mouse-move :up pd/mouse-up}
-                                       :drawing {:down dr/mouse-down :move dr/mouse-move :up dr/mouse-up}}
-               ]
-           (when @dom-node
-             (draw dom-node state pg-id))
-           [:div.with-canvas 
-            {:on-mouse-down (partial (get-in handler [tool :down]) state pg-id)
-             :on-mouse-move (partial (get-in handler [tool :move]) state pg-id)
-             :on-mouse-up   (partial (get-in handler [tool :up  ]) state pg-id)
-             :style {:background-color "white"
-                     :width (* scale width)
-                     :height (* scale height)}}
-
-            [:canvas 
-             {:width (* scale width)
-              :height (* scale height)}]]))
-       }
+       ;(for [pn-id (keys panels)]
+       ;  )
+       ]
       )))
 
 (defn blank [state]
@@ -161,6 +124,8 @@
     (let [current-page (get-in @state [:appstate :current-page])]
       (if (<= (- l 2) current-page (+ 2 r))
         [:div.spread 
+         {:style {:margin 15
+                  :display "flex"}}
          (if (nil? l) [blank state] [page state l])
          (if (nil? r) [blank state] [page state r])]
         [:div.spread

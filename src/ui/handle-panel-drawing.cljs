@@ -26,20 +26,20 @@
     (ui.panel/walk! state pg-id panel-id)))
 
 (defn mouse-down [state pg-id e]
-    (let [appstate                (r/cursor state [:appstate])
-          page                    (r/cursor state [:pages pg-id])
-          
-          cells                   (@page :cells)
-          panels                  (@page :panels)
+  (let [appstate      (r/cursor state [:appstate])
+        page          (r/cursor state [:pages pg-id])
 
-          cell                    (clicked-cell state e)
-          new-panel?              (->> (cells cell) boolean not);; the cell that was clicked on doesn't belong to an existing panel
-          max-panel-id            (if (empty? panels) 0 (inc (apply max (keys panels))))
-          panel-id                (or (cells cell) max-panel-id)]
+        cells         (get @page :cells)
+        panels        (get @page :panels)
 
-      (swap! appstate assoc :active-panel panel-id)
-      (when new-panel? (add-cell state pg-id panel-id cell))
-      ))
+        cell          (clicked-cell state e)
+        new-panel?    (->> (cells cell) boolean not);; the cell that was clicked on doesn't belong to an existing panel
+        max-panel-id  (if (empty? panels) 0 (inc (apply max (keys panels))))
+        panel-id      (or (cells cell) max-panel-id)]
+
+    (swap! appstate assoc :active-panel panel-id)
+    (when new-panel? (add-cell state pg-id panel-id cell))
+    ))
 
 (defn mouse-move [state pg-id e]
   (when (get-in @state [:appstate :active-panel])

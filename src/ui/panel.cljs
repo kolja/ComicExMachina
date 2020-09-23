@@ -3,7 +3,7 @@
             [reagent.dom :as rd]
             [clojure.string :refer [join]]
             [tools.devtools :refer [log]]
-            [ui.tools :refer [inside?]]
+            [ui.tools :refer [lpad inside?]]
             [tools.helpers :refer [for-indexed]]
             [oops.core :refer [oget oset! ocall]]))
 
@@ -119,10 +119,10 @@
                                     (map first))) ] ; remove all cells that belong to panel 'i'
         (merge c1 (zipmap cells (repeat panel-id))))))
 
-(defn walk! [state page-num panel-id]
+(defn walk! [state pg-id panel-id]
   (let [prefs                    (get @state :preferences)
         [cell-width cell-height] (prefs :cell-dimensions)
-        page                     (r/cursor state [:pages page-num])
+        page                     (r/cursor state [:pages pg-id])
         panel                    (r/cursor page [:panels panel-id])
         cells                    (@panel :cells) ;; will be rebound after 'walk-the-line'
         offset                   (/ (prefs :gutter-width) 2)
@@ -141,4 +141,43 @@
                            :verts verts
                            :bounding-box (bounding-box verts))
         (swap! page update :cells (remove-disconnected cells panel-id)))))
+
+(defn panel [state pg-id pn-id]
+  (fn [state pg-id pn-id]
+
+    (let [appstate               (r/cursor state [:appstate])
+          {:keys [width height export-path] [cw ch] :cell-dimensions} 
+                                 (get @state :preferences)
+          {:keys [scale tool]}   @appstate
+          panel                  (get-in @state [:pages pg-id :panels pn-id])
+          [[bx by] [bx2 by2]]    (get panel :bounding-box)
+
+          strokes                 (join " " (for [{:keys [verts]} (get panel :strokes)]
+                                        (str "M" (join "L" (for [[x y] verts] (str x " " y))))))
+
+          bw                     (- bx2 bx)
+          bh                     (- by2 by)
+          p2                     (partial lpad "0" 2)
+          ]
+
+      ;(ocall ipc :invoke "server-hello", (str "page-" pg-id)) 
+
+      [:g {:key (str "panel-" pg-id "-" pn-id)}
+       [:foreignObject {:width (* cw bw) 
+                        :height (* ch bh) 
+                        :clip-path (str "url(#clipimg-" (p2 pg-id) "-" (p2 pn-id) ")") 
+                        :x (* cw bx)  
+                        :y (* ch by)}
+
+        [:img {:style {:pointer-events "none"}
+               :src (str "file://" export-path "page" (p2 pg-id) "/panel00.png") }]]
+
+       [:path {:key (str "outline" pn-id)
+               :d strokes
+               :stroke "#4a8ac7"
+               :clip-path (str "url(#clipsvg-" (p2 pg-id) "-" (p2 pn-id) ")") 
+               :stroke-width 2
+               :fill "none"}]]
+
+      )))
 
