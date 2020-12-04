@@ -8,6 +8,9 @@
             [ui.toolbar :refer [toolbar]]
             [oops.core :refer [oget ocall]]))
 
+(defonce ipc (-> (js/require "electron") 
+                 (oget :ipcRenderer)))
+
 (enable-console-print!)
 
 (defonce state (r/atom {
@@ -33,6 +36,11 @@
                                    :panels {} 
                                    :cells {}} ;; empty doc at least contains one page}
                                 }}))
+
+
+(ocall ipc :on "request-state" (fn [e data] 
+                                 (ocall ipc :invoke "save" (clj->js @state))))
+
 
 (defn mouse-wheel [appstate e]
   (let [s             (oget e :deltaX)
@@ -82,5 +90,6 @@
       )
     ))
 
+(defn hello [] (log "hello world"))
 (rd/render [root state] (ocall js/document :getElementById "app"))
 

@@ -4,8 +4,8 @@
             [clojure.string :refer [join]]
             [ui.panel :refer [panel]]
             [ui.tools :refer [lpad]]
-            [ui.handle-panel-drawing :as pd]
-            [ui.drawing-area :as dr]
+            [ui.paneldrawing :as pd]
+            [ui.drawingarea :as dr]
             [tools.devtools :refer [log]]
             [tools.helpers :refer [for-indexed]]
             [oops.core :refer [oget oset! ocall]]))

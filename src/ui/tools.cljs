@@ -1,4 +1,3 @@
-
 (ns ui.tools
   (:require [oops.core :refer [oget ocall]]
             [goog.string :as gstring]

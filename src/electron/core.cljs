@@ -14,6 +14,8 @@
 (ocall ipc-main :handle "server-hello" (fn [e & args]
   (ocall js/console :log (str args ": Server Hello!"))))
 
+(defn hello [] "hello world")
+
 (defn init-browser []
   (reset! main-window (browser-window.
                         (clj->js {:width 800
@@ -22,7 +24,7 @@
                                   :icon (str js/__dirname "/public/icon/icon.png")
                                   :webPreferences {:nodeIntegration true }}))) ;; <-- do I really need this?
 
-  (ocall (.-webContents @main-window) :openDevTools)
+  ;; (ocall (.-webContents @main-window) :openDevTools)
 
   ;(-> (ocall session "defaultSession.loadExtension" "/Users/kolja/Library/Application Support/Google/Chrome/Default/Extensions/fmkadmapgofadopljbjfkapdkoienihi/4.8.2_0")
   ;    (.then (ocall (.-webContents @main-window) :openDevTools)))

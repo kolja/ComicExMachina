@@ -18,11 +18,17 @@
                                     "resources/public/js/ui-out"]
   :cljsbuild
   {:builds
-   [{:source-paths ["src/electron"]
+   [{:source-paths ["node_modules/canvas" "src/electron"]
      :id "electron-dev"
      :compiler {:output-to "resources/main.js"
                 :output-dir "resources/public/js/electron-dev"
                 :optimizations :simple
+                ;:install-deps true
+                :foreign-libs [{:file "node_modules/canvas/index.js"
+                                ;:provides "canvas"
+                                :module-type :es6
+                                }]
+                ;:npm-deps {:canvas "2.6.1"}
                 :pretty-print true
                 :cache-analysis true}}
     {:source-paths ["src/ui" "src/dev"]
@@ -41,6 +47,11 @@
                 :output-dir "resources/public/js/electron-release"
                 :externs ["cljs-externs/common.js"]
                 :optimizations :advanced
+                :install-deps true
+                :foreign-libs [{:file "node_modules/canvas/index.js"
+                                :provides "canvas"
+                                :module-type :es6}]
+                :npm-deps {:canvas "2.6.1"}
                 :cache-analysis true
                 :infer-externs true}}
     {:source-paths ["src/ui"]

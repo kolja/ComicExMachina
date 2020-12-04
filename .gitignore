@@ -10,3 +10,4 @@ figwheel_server.log
 .lein-repl-history
 .rebel_readline_history
 package-lock.json
+.shadow-cljs/

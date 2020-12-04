@@ -1,5 +1,4 @@
-
-(ns ui.handle-panel-drawing
+(ns ui.paneldrawing
   (:require [reagent.core :as r]
             [reagent.dom :as rd]
             [clojure.string :refer [join]]

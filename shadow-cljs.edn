@@ -1,0 +1,26 @@
+;; shadow-cljs configuration
+
+{:source-paths ["src"]
+ :dependencies
+   [[reagent "1.0.0-alpha2"]
+    [binaryage/oops "0.7.0"]
+    [ring/ring-core "1.7.1"]]
+
+ :builds {
+   :electron {
+     :target :node-script
+     :output-to "resources/main.js"
+     :output-dir "resources/public/js/electron-dev"
+     :asset-path "resources/public"
+     :main electron.core/hello
+   }
+   :ui {
+     :target :browser
+     :output-dir "resources/public/js"
+     :asset-path "js"
+     :modules {:ui {:init-fn ui.core/hello}}
+     ;; :devtools {:after-load ui.core/hello-again}
+   }
+  }
+}
+

@@ -1,4 +1,4 @@
-(ns ui.drawing-area
+(ns ui.drawingarea
   (:require [reagent.core :as r]
             [reagent.dom :as rd]
             [ui.tools :refer [clicked-cell offset]]

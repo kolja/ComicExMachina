@@ -1,8 +1,9 @@
 (ns ui.toolbar
-  (:require [reagent.core :as r]
-            [reagent.dom :as rd]
-            [oops.core :refer [oget ocall]]
-            [tools.devtools :refer [log]]))
+  (:require 
+    [reagent.core :as r]
+    [reagent.dom :as rd]
+    [oops.core :refer [oget ocall]]
+    [tools.devtools :refer [log]]))
 
 (enable-console-print!)
 
