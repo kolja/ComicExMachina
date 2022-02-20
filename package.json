@@ -1,7 +1,7 @@
 {
   "name": "ComicExMachina",
   "productName": "ComiExMachina",
-  "description": "starting template for creating Electron Applications (with ClojureScript and Rum)",
+  "description": "Create Comics",
   "version": "0.1.0",
   "license": "MIT",
   "repository": {
@@ -14,15 +14,15 @@
   },
   "devDependencies": {
     "electron-packager": "^15.0.0",
-    "electron-rebuild": "^2.3.2",
+    "electron-rebuild": "^2.3.5",
     "shadow-cljs": "^2.11.7"
   },
   "dependencies": {
     "@cljs-oss/module-deps": "^1.1.1",
-    "canvas": "^2.6.1",
-    "electron": "^9.2.0",
-    "node-gyp": "^7.1.2",
-    "react": "^16.13.0",
-    "react-dom": "^16.13.0"
+    "canvas": "^2.9.0",
+    "electron": "^17.0.1",
+    "node-gyp": "^8.4.1",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
   }
 }

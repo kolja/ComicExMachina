@@ -23,12 +23,12 @@
      :compiler {:output-to "resources/main.js"
                 :output-dir "resources/public/js/electron-dev"
                 :optimizations :simple
-                ;:install-deps true
+                :install-deps true
                 :foreign-libs [{:file "node_modules/canvas/index.js"
-                                ;:provides "canvas"
+                                :provides "canvas"
                                 :module-type :es6
                                 }]
-                ;:npm-deps {:canvas "2.6.1"}
+                :npm-deps {:canvas "2.6.1"}
                 :pretty-print true
                 :cache-analysis true}}
     {:source-paths ["src/ui" "src/dev"]
